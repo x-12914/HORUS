@@ -79,6 +79,20 @@
     </div>
   </div>
 
+  <div class="panel">
+    <div class="section-title">Drone Feed</div>
+    <div class="form-grid">
+      <div class="full">
+        <label>Live Drone Feed Source (URL)</label>
+        <input name="drone_feed_url" value="{{ m.drone_feed_url if m else '' }}"
+               placeholder="e.g. https://feed.example/stream — leave blank, live footage to be connected later">
+        <div class="muted" style="font-size:11px; margin-top:6px; letter-spacing:.5px">
+          ▸ Optional. Leave empty for now — the dossier shows an OFFLINE placeholder until a feed URL is added.
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="btn-row" style="margin-top:18px">
     <button class="btn btn-primary" type="submit">▣ {{ 'Commit Record' if action=='new' else 'Save Changes' }}</button>
     <a class="btn" href="{{ url_for('mission_detail', mission_id=m.id) if m else url_for('missions') }}">Cancel</a>

@@ -202,15 +202,16 @@ def mission_new():
         mid = db.execute(
             """INSERT INTO missions
                (codename, operation_name, branch, classification, commander,
-                location, objective, start_date, end_date, status, outcome, summary)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                location, objective, start_date, end_date, status, outcome, summary,
+                drone_feed_url)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 _form("codename"), _form("operation_name"), _form("branch", "Army"),
                 _form("classification", "RESTRICTED"), _form("commander"),
                 _form("location"), _form("objective"),
                 _form("start_date") or None, _form("end_date") or None,
                 _form("status", "PLANNED"), _form("outcome", "PENDING"),
-                _form("summary"),
+                _form("summary"), _form("drone_feed_url") or None,
             ),
         )
         flash(f"Mission record created — ID #{mid:04d}.", "success")
@@ -250,14 +251,14 @@ def mission_edit(mission_id):
             """UPDATE missions SET
                codename=?, operation_name=?, branch=?, classification=?, commander=?,
                location=?, objective=?, start_date=?, end_date=?, status=?,
-               outcome=?, summary=? WHERE id=?""",
+               outcome=?, summary=?, drone_feed_url=? WHERE id=?""",
             (
                 _form("codename"), _form("operation_name"), _form("branch", "Army"),
                 _form("classification", "RESTRICTED"), _form("commander"),
                 _form("location"), _form("objective"),
                 _form("start_date") or None, _form("end_date") or None,
                 _form("status", "PLANNED"), _form("outcome", "PENDING"),
-                _form("summary"), mission_id,
+                _form("summary"), _form("drone_feed_url") or None, mission_id,
             ),
         )
         flash("Mission record updated.", "success")

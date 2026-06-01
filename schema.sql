@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS missions (
     status          TEXT    NOT NULL DEFAULT 'PLANNED', -- PLANNED/ONGOING/COMPLETED/ABORTED/COMPROMISED
     outcome         TEXT    NOT NULL DEFAULT 'PENDING',  -- SUCCESS/PARTIAL/FAILURE/PENDING
     summary         TEXT,               -- outcome narrative
+    drone_feed_url  TEXT,               -- live drone feed source (added later; placeholder for now)
     created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 

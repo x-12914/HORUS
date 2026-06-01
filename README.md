@@ -1,6 +1,6 @@
 # HORUS — Historical Operations Record & Unified Storage
 
-A historical recording system for the Ministry of Defence. It records every
+A historical recording system for military operations. It records every
 mission, stores outcomes and reports, documents casualties and operational
 challenges, and turns the accumulated record into analytics that support
 **better future planning, transparency and accountability**.

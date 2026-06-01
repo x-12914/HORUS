@@ -50,14 +50,31 @@ def execute(sql, params=()):
     return last_id
 
 
+# Columns added after the initial release. CREATE TABLE IF NOT EXISTS in
+# schema.sql cannot alter an existing table, so each new column is applied here
+# as an idempotent migration when init_db() runs (e.g. on service restart).
+MIGRATIONS = [
+    ("missions", "drone_feed_url", "TEXT"),
+]
+
+
+def _ensure_column(conn, table, column, ddl):
+    """ALTER TABLE ... ADD COLUMN if the column is not already present."""
+    existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+    if column not in existing:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
+
+
 def init_db():
-    """Create tables from schema.sql. Safe to call repeatedly."""
+    """Create tables from schema.sql and apply migrations. Safe to call repeatedly."""
     conn = sqlite3.connect(DB_PATH)
     # WAL allows concurrent readers while one writer is active — important
     # once multiple Gunicorn workers are hitting the same SQLite file.
     conn.execute("PRAGMA journal_mode = WAL")
     with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
         conn.executescript(f.read())
+    for table, column, ddl in MIGRATIONS:
+        _ensure_column(conn, table, column, ddl)
     conn.commit()
     conn.close()
 
