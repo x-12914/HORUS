@@ -1,35 +1,35 @@
-# systemd unit for Defense-LOG (Gunicorn).
+# systemd unit for HORUS (Gunicorn).
 # Install:
-#   sudo cp deploy/defenselog.service /etc/systemd/system/defenselog.service
+#   sudo cp deploy/horus.service /etc/systemd/system/horus.service
 #   sudo systemctl daemon-reload
-#   sudo systemctl enable --now defenselog
+#   sudo systemctl enable --now horus
 # Inspect:
-#   systemctl status defenselog
-#   journalctl -u defenselog -f
+#   systemctl status horus
+#   journalctl -u horus -f
 #
 # Adjust User, WorkingDirectory, the venv path and the bind port to match
 # your VPS. Pick a port that nothing else on the box is already using.
 
 [Unit]
-Description=Defense-LOG Operation Recording System
+Description=HORUS — Historical Operations Record & Unified Storage
 After=network.target
 
 [Service]
 Type=simple
 User=www-data
 Group=www-data
-WorkingDirectory=/opt/defenselog
+WorkingDirectory=/opt/horus
 
 # --- Required secrets / config ---
 # Generate the key with: python -c "import secrets; print(secrets.token_hex(32))"
-Environment="DEFENSELOG_SECRET_KEY=REPLACE_WITH_LONG_RANDOM_VALUE"
-Environment="DEFENSELOG_DB=/opt/defenselog/defense_log.db"
+Environment="HORUS_SECRET_KEY=REPLACE_WITH_LONG_RANDOM_VALUE"
+Environment="HORUS_DB=/opt/horus/horus.db"
 # Set to 1 only once TLS terminates in front of the app (secure cookies).
-Environment="DEFENSELOG_HTTPS=0"
+Environment="HORUS_HTTPS=0"
 
 # Bind directly to a free port for now. Switch 0.0.0.0 -> 127.0.0.1 later if
 # you put it behind your existing Nginx instead of exposing the port.
-ExecStart=/opt/defenselog/venv/bin/gunicorn \
+ExecStart=/opt/horus/venv/bin/gunicorn \
     --workers 3 \
     --bind 0.0.0.0:8050 \
     --preload \

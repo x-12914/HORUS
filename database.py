@@ -1,4 +1,4 @@
-"""Database access layer for Defense-LOG.
+"""Database access layer for HORUS.
 
 Thin wrapper around sqlite3 that gives every request its own connection,
 returns rows as dict-like objects, and exposes a couple of helpers for
@@ -10,9 +10,9 @@ import sqlite3
 from flask import g
 
 # Database file lives next to this module by default, but the path can be
-# overridden in production via the DEFENSELOG_DB environment variable.
+# overridden in production via the HORUS_DB environment variable.
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-DB_PATH = os.environ.get("DEFENSELOG_DB") or os.path.join(BASE_DIR, "defense_log.db")
+DB_PATH = os.environ.get("HORUS_DB") or os.path.join(BASE_DIR, "horus.db")
 SCHEMA_PATH = os.path.join(BASE_DIR, "schema.sql")
 
 

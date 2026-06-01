@@ -1,4 +1,4 @@
-"""Defense-LOG :: Operation Recording System
+"""HORUS :: Historical Operations Record & Unified Storage
 =================================================
 
 A historical recording system for military operations. It records every
@@ -24,17 +24,17 @@ import database as db
 app = Flask(__name__)
 
 # --- Configuration (environment-driven for production) ---------------------
-# In production set DEFENSELOG_SECRET_KEY to a long random value. The fallback
+# In production set HORUS_SECRET_KEY to a long random value. The fallback
 # below only exists so local development works out of the box.
 app.config["SECRET_KEY"] = os.environ.get(
-    "DEFENSELOG_SECRET_KEY", "dev-insecure-key-change-me"
+    "HORUS_SECRET_KEY", "dev-insecure-key-change-me"
 )
 # Session cookie hardening. SECURE is enabled when served over HTTPS (set
-# DEFENSELOG_HTTPS=1 once you have TLS / proxy in front of it).
+# HORUS_HTTPS=1 once you have TLS / proxy in front of it).
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=os.environ.get("DEFENSELOG_HTTPS", "0") == "1",
+    SESSION_COOKIE_SECURE=os.environ.get("HORUS_HTTPS", "0") == "1",
     PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
 )
 db.init_app(app)
@@ -474,8 +474,8 @@ if __name__ == "__main__":
     with app.app_context():
         _ensure_dev_admin()
 
-    host = os.environ.get("DEFENSELOG_HOST", "127.0.0.1")
-    port = int(os.environ.get("DEFENSELOG_PORT", "5000"))
-    debug = os.environ.get("DEFENSELOG_DEBUG", "1") == "1"
-    print(f"\n  DEFENSE-LOG online  ->  http://{host}:{port}\n")
+    host = os.environ.get("HORUS_HOST", "127.0.0.1")
+    port = int(os.environ.get("HORUS_PORT", "5000"))
+    debug = os.environ.get("HORUS_DEBUG", "1") == "1"
+    print(f"\n  HORUS online  ->  http://{host}:{port}\n")
     app.run(debug=debug, host=host, port=port)

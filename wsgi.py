@@ -1,4 +1,4 @@
-"""Production WSGI entrypoint for Defense-LOG.
+"""Production WSGI entrypoint for HORUS.
 
 Served by Gunicorn, e.g.:
     gunicorn --workers 3 --bind 0.0.0.0:8050 --preload wsgi:app

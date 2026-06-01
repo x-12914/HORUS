@@ -1,4 +1,4 @@
-// DEFENSE-LOG — light client behaviour: live clock + clickable rows.
+// HORUS — light client behaviour: live clock + clickable rows.
 (function () {
   // Zulu-style live clock in the sidebar.
   const clock = document.getElementById("clock");

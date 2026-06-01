@@ -1,4 +1,4 @@
-"""Seed Defense-LOG with a realistic (fictional) demo dataset.
+"""Seed HORUS with a realistic (fictional) demo dataset.
 
 Called automatically on first run via app.py. The data is invented for
 demonstration only — codenames, names and locations are not real.

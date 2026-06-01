@@ -1,4 +1,4 @@
--- Defense-LOG :: Operation Recording System
+-- HORUS :: Historical Operations Record & Unified Storage
 -- SQLite schema. All operational data is stored here and forms the
 -- historical database used for strategic decision-making.
 

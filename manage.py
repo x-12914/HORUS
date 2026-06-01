@@ -1,4 +1,4 @@
-"""Defense-LOG management CLI.
+"""HORUS management CLI.
 
 Operational tasks that run outside the web server — initialise the database,
 seed demo data, and manage operator accounts. Uses sqlite3 directly so it does
@@ -116,7 +116,7 @@ def cmd_list_users(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="manage.py", description="Defense-LOG admin CLI")
+    parser = argparse.ArgumentParser(prog="manage.py", description="HORUS admin CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("init-db", help="create database tables").set_defaults(func=cmd_init_db)
