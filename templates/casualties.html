@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "macros.html" import casualty_badge %}
+{% block title %}Casualty Register{% endblock %}
+{% block crumb %}Casualty Register{% endblock %}
+
+{% block content %}
+<form class="filterbar" method="get" action="{{ url_for('casualties_register') }}">
+  <div class="field">
+    <label>Type</label>
+    <select name="type" onchange="this.form.submit()">
+      <option value="">ALL TYPES</option>
+      {% for t in vocab.casualty_types %}<option value="{{ t }}" {{ 'selected' if f_type==t }}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <a class="btn" href="{{ url_for('casualties_register') }}">Reset</a>
+</form>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr>
+      <th>Type</th><th>Rank / Name</th><th>Service No.</th><th>Unit</th><th>Operation</th><th>Date</th>
+    </tr></thead>
+    <tbody>
+      {% for c in casualties %}
+      <tr class="row-link" data-href="{{ url_for('mission_detail', mission_id=c.mission_id) }}#casualties">
+        <td>{{ casualty_badge(c.casualty_type) }}</td>
+        <td><b>{{ c.rank }} {{ c.name or 'UNKNOWN' }}</b></td>
+        <td class="muted">{{ c.service_number or '—' }}</td>
+        <td>{{ c.unit or '—' }}</td>
+        <td>{{ c.codename }} <span class="muted" style="font-size:11px">/ {{ c.operation_name }}</span></td>
+        <td class="muted">{{ c.date or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="center muted" style="padding:30px">NO CASUALTY RECORDS</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="muted" style="margin-top:12px; font-size:11px; letter-spacing:1px">{{ casualties|length }} CASUALTY RECORD(S)</p>
+{% endblock %}

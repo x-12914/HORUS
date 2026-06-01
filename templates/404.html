@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}404{% endblock %}
+{% block crumb %}Record Not Found{% endblock %}
+{% block content %}
+<div class="panel center" style="padding:60px">
+  <div style="font-size:64px; color:var(--amber); font-family:var(--head); font-weight:700">404</div>
+  <p class="muted" style="letter-spacing:2px">REQUESTED RECORD DOES NOT EXIST OR HAS BEEN PURGED</p>
+  <a class="btn btn-primary" href="{{ url_for('dashboard') }}" style="margin-top:16px">◉ Return to Command Deck</a>
+</div>
+{% endblock %}

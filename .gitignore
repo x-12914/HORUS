@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+env/
+
+# Secrets & local config
+.env
+
+# SQLite database (and WAL/SHM sidecar files) — never commit operational data
+defense_log.db
+*.db-wal
+*.db-shm

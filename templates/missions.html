@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge, outcome_badge, classification_badge %}
+{% block title %}Missions{% endblock %}
+{% block crumb %}Mission Registry{% endblock %}
+
+{% block content %}
+<form class="filterbar" method="get" action="{{ url_for('missions') }}">
+  <div class="field" style="flex:1; min-width:220px">
+    <label>Search</label>
+    <input type="text" name="q" value="{{ f_search }}" placeholder="codename / operation / location">
+  </div>
+  <div class="field">
+    <label>Status</label>
+    <select name="status">
+      <option value="">ALL</option>
+      {% for s in vocab.statuses %}<option value="{{ s }}" {{ 'selected' if f_status==s }}>{{ s }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label>Branch</label>
+    <select name="branch">
+      <option value="">ALL</option>
+      {% for b in vocab.branches %}<option value="{{ b }}" {{ 'selected' if f_branch==b }}>{{ b }}</option>{% endfor %}
+    </select>
+  </div>
+  <button class="btn" type="submit">▸ Filter</button>
+  <a class="btn" href="{{ url_for('missions') }}">Reset</a>
+  <a class="btn btn-primary" href="{{ url_for('mission_new') }}" style="margin-left:auto">+ New</a>
+</form>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr>
+      <th>ID</th><th>Codename / Operation</th><th>Branch</th><th>Location</th>
+      <th>Classification</th><th>Status</th><th>Outcome</th><th>Start</th>
+    </tr></thead>
+    <tbody>
+      {% for m in missions %}
+      <tr class="row-link" data-href="{{ url_for('mission_detail', mission_id=m.id) }}">
+        <td class="mono-id">#{{ '%04d' % m.id }}</td>
+        <td><b>{{ m.codename }}</b><div class="muted" style="font-size:11px">{{ m.operation_name }}</div></td>
+        <td>{{ m.branch }}</td>
+        <td>{{ m.location or '—' }}</td>
+        <td>{{ classification_badge(m.classification) }}</td>
+        <td>{{ status_badge(m.status) }}</td>
+        <td>{{ outcome_badge(m.outcome) }}</td>
+        <td class="muted">{{ m.start_date or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="center muted" style="padding:30px">NO MISSIONS MATCH FILTER — <a href="{{ url_for('mission_new') }}" style="color:var(--green)">record one</a>.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="muted" style="margin-top:12px; font-size:11px; letter-spacing:1px">{{ missions|length }} RECORD(S) DISPLAYED</p>
+{% endblock %}

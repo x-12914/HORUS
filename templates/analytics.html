@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Strategic Analytics{% endblock %}
+{% block crumb %}Strategic Analytics{% endblock %}
+
+{% macro barchart(pairs, color='') %}
+  {% set maxv = (pairs|map(attribute=1)|max) if pairs else 1 %}
+  <div class="bars">
+    {% for label, val in pairs %}
+    <div class="bar-row">
+      <div class="bar-label">{{ label }}</div>
+      <div class="bar-track"><div class="bar-fill {{ color }}" style="width:{{ (100 * val / (maxv or 1))|round(0,'floor') }}%"></div></div>
+      <div class="bar-val">{{ val }}</div>
+    </div>
+    {% else %}<div class="empty">NO DATA</div>{% endfor %}
+  </div>
+{% endmacro %}
+
+{% block content %}
+<p class="muted" style="margin-bottom:20px; letter-spacing:1px; font-size:12px">
+  ▸ Aggregated intelligence drawn from the historical operations database — the evidence base for
+  future planning, force protection and accountability.
+</p>
+
+<div class="cols-2">
+  <div class="panel">
+    <div class="section-title">Missions by Branch</div>
+    {{ barchart(by_branch) }}
+  </div>
+  <div class="panel">
+    <div class="section-title">Mission Outcomes</div>
+    {{ barchart(by_outcome, 'amber') }}
+  </div>
+</div>
+
+<div class="cols-2" style="margin-top:18px">
+  <div class="panel">
+    <div class="section-title">Mission Status</div>
+    {{ barchart(by_status, 'blue') }}
+  </div>
+  <div class="panel">
+    <div class="section-title">Casualties by Type</div>
+    {{ barchart(casualties_by_type, 'red') }}
+  </div>
+</div>
+
+<div class="cols-2" style="margin-top:18px">
+  <div class="panel">
+    <div class="section-title">Challenges by Category</div>
+    {{ barchart(challenges_by_cat, 'amber') }}
+  </div>
+  <div class="panel">
+    <div class="section-title">Casualties by Branch</div>
+    {{ barchart(casualties_by_branch, 'red') }}
+  </div>
+</div>
+
+<hr class="div">
+
+<div class="panel">
+  <div class="section-title">Historical Trend — Operations &amp; Casualties per Year</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Year</th><th>Missions</th><th>Casualties</th><th>Casualty Intensity</th></tr></thead>
+      <tbody>
+        {% set maxcas = (by_year|map(attribute='casualties')|max) if by_year else 1 %}
+        {% for y in by_year %}
+        <tr>
+          <td class="mono-id">{{ y.year }}</td>
+          <td>{{ y.missions }}</td>
+          <td>{{ y.casualties }}</td>
+          <td style="width:40%">
+            <div class="bar-track"><div class="bar-fill red" style="width:{{ (100 * y.casualties / (maxcas or 1))|round(0,'floor') }}%"></div></div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="center muted">NO DATED OPERATIONS ON RECORD</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{# Reusable badge renderers — keep colour logic in one place. #}
+
+{% macro status_badge(s) %}
+  {%- set m = {'COMPLETED':'b-green','ONGOING':'b-blue','PLANNED':'b-grey','ABORTED':'b-amber','COMPROMISED':'b-red'} -%}
+  <span class="badge {{ m.get(s,'b-grey') }}">{{ s }}</span>
+{% endmacro %}
+
+{% macro outcome_badge(o) %}
+  {%- set m = {'SUCCESS':'b-green','PARTIAL':'b-amber','FAILURE':'b-red','PENDING':'b-grey'} -%}
+  <span class="badge {{ m.get(o,'b-grey') }}">{{ o }}</span>
+{% endmacro %}
+
+{% macro classification_badge(c) %}
+  {%- set m = {'TOP SECRET':'b-red','SECRET':'b-amber','CONFIDENTIAL':'b-purple','RESTRICTED':'b-blue','UNCLASSIFIED':'b-grey'} -%}
+  <span class="badge {{ m.get(c,'b-grey') }}">{{ c }}</span>
+{% endmacro %}
+
+{% macro casualty_badge(t) %}
+  {%- set m = {'KIA':'b-red','WIA':'b-amber','MIA':'b-purple','POW':'b-blue'} -%}
+  <span class="badge {{ m.get(t,'b-grey') }}">{{ t }}</span>
+{% endmacro %}
+
+{% macro severity_badge(s) %}
+  {%- set m = {'CRITICAL':'b-red','HIGH':'b-amber','MEDIUM':'b-blue','LOW':'b-grey'} -%}
+  <span class="badge {{ m.get(s,'b-grey') }}">{{ s }}</span>
+{% endmacro %}
+
+{% macro report_badge(t) %}
+  {%- set m = {'AAR':'b-green','SITREP':'b-blue','INTEL':'b-purple','DEBRIEF':'b-amber'} -%}
+  <span class="badge {{ m.get(t,'b-grey') }}">{{ t }}</span>
+{% endmacro %}

@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge, outcome_badge, classification_badge, casualty_badge, severity_badge, report_badge %}
+{% block title %}{{ mission.codename }}{% endblock %}
+{% block crumb %}Mission Dossier{% endblock %}
+
+{% block content %}
+{% set m = mission %}
+
+<div class="detail-head">
+  <div>
+    <div class="muted mono-id">DOSSIER #{{ '%04d' % m.id }}</div>
+    <div class="detail-code">{{ m.codename }}</div>
+    <div class="detail-name">{{ m.operation_name }}</div>
+    <div class="tag-meta">
+      {{ classification_badge(m.classification) }}
+      {{ status_badge(m.status) }}
+      {{ outcome_badge(m.outcome) }}
+      <span class="badge b-grey">{{ m.branch }}</span>
+    </div>
+  </div>
+  <div class="btn-row">
+    <a class="btn" href="{{ url_for('mission_edit', mission_id=m.id) }}">✎ Edit</a>
+    <form class="inline-form" method="post" action="{{ url_for('mission_delete', mission_id=m.id) }}"
+          data-confirm="Purge mission #{{ '%04d' % m.id }} and ALL linked casualties, challenges and reports? This cannot be undone.">
+      <button class="btn btn-danger" type="submit">✕ Purge</button>
+    </form>
+  </div>
+</div>
+
+<div class="cols-2">
+  <div>
+    <div class="panel">
+      <div class="section-title">Operational Detail</div>
+      <dl class="kv">
+        <dt>Commander</dt><dd>{{ m.commander or '—' }}</dd>
+        <dt>Location</dt><dd>{{ m.location or '—' }}</dd>
+        <dt>Start Date</dt><dd>{{ m.start_date or '—' }}</dd>
+        <dt>End Date</dt><dd>{{ m.end_date or '—' }}</dd>
+        <dt>Objective</dt><dd>{{ m.objective or '—' }}</dd>
+        <dt>Outcome</dt><dd>{{ m.summary or '—' }}</dd>
+        <dt>Logged</dt><dd class="muted">{{ m.created_at }}</dd>
+      </dl>
+    </div>
+  </div>
+  <div>
+    <div class="grid grid-stats" style="grid-template-columns:1fr 1fr">
+      <div class="stat red"><div class="stat-label">Casualties</div><div class="stat-value red">{{ casualties|length }}</div></div>
+      <div class="stat amber"><div class="stat-label">Challenges</div><div class="stat-value amber">{{ challenges|length }}</div></div>
+      <div class="stat blue"><div class="stat-label">Reports</div><div class="stat-value blue">{{ reports|length }}</div></div>
+      <div class="stat"><div class="stat-label">KIA</div><div class="stat-value">{{ casualties|selectattr('casualty_type','equalto','KIA')|list|length }}</div></div>
+    </div>
+  </div>
+</div>
+
+<hr class="div">
+
+<!-- ============ CASUALTIES ============ -->
+<section id="casualties">
+  <div class="section-title">Casualty Record</div>
+  {% for c in casualties %}
+  <div class="rec">
+    <div class="rec-head">
+      <div class="rec-title">
+        {{ casualty_badge(c.casualty_type) }}
+        <b style="margin-left:6px">{{ c.rank }} {{ c.name or 'UNKNOWN' }}</b>
+        <span class="muted" style="margin-left:8px; font-size:11px">{{ c.service_number or '' }}</span>
+      </div>
+      <form class="inline-form" method="post" action="{{ url_for('casualty_delete', cid=c.id) }}" data-confirm="Remove this casualty record?">
+        <button class="btn btn-sm btn-danger" type="submit">✕</button>
+      </form>
+    </div>
+    <div class="rec-meta">UNIT: {{ c.unit or '—' }} &nbsp;//&nbsp; DATE: {{ c.date or '—' }}</div>
+    {% if c.notes %}<div class="rec-body">{{ c.notes }}</div>{% endif %}
+  </div>
+  {% else %}
+  <div class="empty">NO CASUALTIES RECORDED FOR THIS OPERATION</div>
+  {% endfor %}
+
+  <details class="addbox">
+    <summary>Record Casualty</summary>
+    <form method="post" action="{{ url_for('casualty_add', mission_id=m.id) }}">
+      <div class="form-grid">
+        <div><label>Service Number</label><input name="service_number" placeholder="e.g. 1043221"></div>
+        <div><label>Name</label><input name="name"></div>
+        <div><label>Rank</label><input name="rank" placeholder="e.g. Sergeant"></div>
+        <div><label>Unit</label><input name="unit"></div>
+        <div>
+          <label>Type</label>
+          <select name="casualty_type">{% for t in vocab.casualty_types %}<option>{{ t }}</option>{% endfor %}</select>
+        </div>
+        <div><label>Date</label><input type="date" name="date"></div>
+        <div class="full"><label>Notes</label><textarea name="notes" style="min-height:60px"></textarea></div>
+      </div>
+      <div style="margin-top:14px"><button class="btn btn-primary" type="submit">✚ Add Casualty</button></div>
+    </form>
+  </details>
+</section>
+
+<hr class="div">
+
+<!-- ============ CHALLENGES ============ -->
+<section id="challenges">
+  <div class="section-title">Operational Challenges</div>
+  {% for c in challenges %}
+  <div class="rec">
+    <div class="rec-head">
+      <div class="rec-title">{{ severity_badge(c.severity) }} <b style="margin-left:6px">{{ c.category }}</b></div>
+      <form class="inline-form" method="post" action="{{ url_for('challenge_delete', cid=c.id) }}" data-confirm="Remove this challenge record?">
+        <button class="btn btn-sm btn-danger" type="submit">✕</button>
+      </form>
+    </div>
+    <div class="rec-body">{{ c.description }}</div>
+    {% if c.resolution %}<div class="rec-meta">RESOLUTION: {{ c.resolution }}</div>{% endif %}
+  </div>
+  {% else %}
+  <div class="empty">NO CHALLENGES LOGGED</div>
+  {% endfor %}
+
+  <details class="addbox">
+    <summary>Log Challenge</summary>
+    <form method="post" action="{{ url_for('challenge_add', mission_id=m.id) }}">
+      <div class="form-grid">
+        <div>
+          <label>Category</label>
+          <select name="category">{% for c in vocab.challenge_categories %}<option>{{ c }}</option>{% endfor %}</select>
+        </div>
+        <div>
+          <label>Severity</label>
+          <select name="severity">{% for s in vocab.severities %}<option {{ 'selected' if s=='MEDIUM' }}>{{ s }}</option>{% endfor %}</select>
+        </div>
+        <div class="full"><label>Description *</label><textarea name="description" required style="min-height:60px"></textarea></div>
+        <div class="full"><label>Resolution / Mitigation</label><textarea name="resolution" style="min-height:60px"></textarea></div>
+      </div>
+      <div style="margin-top:14px"><button class="btn btn-primary" type="submit">⚠ Log Challenge</button></div>
+    </form>
+  </details>
+</section>
+
+<hr class="div">
+
+<!-- ============ REPORTS ============ -->
+<section id="reports">
+  <div class="section-title">Filed Reports</div>
+  {% for r in reports %}
+  <div class="rec">
+    <div class="rec-head">
+      <div class="rec-title">{{ report_badge(r.report_type) }} <b style="margin-left:6px">{{ r.title }}</b></div>
+      <form class="inline-form" method="post" action="{{ url_for('report_delete', rid=r.id) }}" data-confirm="Remove this report?">
+        <button class="btn btn-sm btn-danger" type="submit">✕</button>
+      </form>
+    </div>
+    <div class="rec-meta">BY: {{ r.author or 'UNATTRIBUTED' }} &nbsp;//&nbsp; FILED: {{ r.created_at }}</div>
+    {% if r.content %}<div class="rec-body" style="white-space:pre-wrap">{{ r.content }}</div>{% endif %}
+  </div>
+  {% else %}
+  <div class="empty">NO REPORTS FILED</div>
+  {% endfor %}
+
+  <details class="addbox">
+    <summary>File Report</summary>
+    <form method="post" action="{{ url_for('report_add', mission_id=m.id) }}">
+      <div class="form-grid">
+        <div><label>Title *</label><input name="title" required></div>
+        <div>
+          <label>Type</label>
+          <select name="report_type">{% for t in vocab.report_types %}<option>{{ t }}</option>{% endfor %}</select>
+        </div>
+        <div class="full"><label>Author</label><input name="author" placeholder="Rank &amp; name"></div>
+        <div class="full"><label>Content</label><textarea name="content" style="min-height:120px"></textarea></div>
+      </div>
+      <div style="margin-top:14px"><button class="btn btn-primary" type="submit">▤ File Report</button></div>
+    </form>
+  </details>
+</section>
+{% endblock %}

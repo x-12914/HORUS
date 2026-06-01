@@ -1,0 +1,3 @@
+Flask==3.0.3
+# Production WSGI server (Linux/VPS). Skipped on Windows local dev.
+gunicorn==22.0.0 ; sys_platform != "win32"

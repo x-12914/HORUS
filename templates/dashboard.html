@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge, outcome_badge, classification_badge %}
+{% block title %}Command Deck{% endblock %}
+{% block crumb %}Command Deck{% endblock %}
+
+{% block content %}
+<div class="grid grid-stats">
+  <div class="stat">
+    <div class="stat-label">Total Missions</div>
+    <div class="stat-value green">{{ totals.missions }}</div>
+    <div class="stat-foot">{{ totals.ongoing }} currently active</div>
+  </div>
+  <div class="stat blue">
+    <div class="stat-label">Operational Success</div>
+    <div class="stat-value blue">{{ success_rate }}%</div>
+    <div class="stat-foot">of completed operations</div>
+  </div>
+  <div class="stat red">
+    <div class="stat-label">Casualties Logged</div>
+    <div class="stat-value red">{{ totals.casualties }}</div>
+    <div class="stat-foot">{{ totals.kia }} KIA recorded</div>
+  </div>
+  <div class="stat amber">
+    <div class="stat-label">Critical Challenges</div>
+    <div class="stat-value amber">{{ totals.critical_challenges }}</div>
+    <div class="stat-foot">flagged for review</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Filed Reports</div>
+    <div class="stat-value">{{ totals.reports }}</div>
+    <div class="stat-foot">AAR / SITREP / INTEL</div>
+  </div>
+</div>
+
+<hr class="div">
+
+<div class="cols-2">
+  <section>
+    <div class="section-title">Recent Operations</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>ID</th><th>Codename</th><th>Branch</th><th>Status</th><th>Outcome</th>
+        </tr></thead>
+        <tbody>
+          {% for m in recent %}
+          <tr class="row-link" data-href="{{ url_for('mission_detail', mission_id=m.id) }}">
+            <td class="mono-id">#{{ '%04d' % m.id }}</td>
+            <td><b>{{ m.codename }}</b><div class="muted" style="font-size:11px">{{ m.operation_name }}</div></td>
+            <td>{{ m.branch }}</td>
+            <td>{{ status_badge(m.status) }}</td>
+            <td>{{ outcome_badge(m.outcome) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="center muted">No missions recorded yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title">Force Distribution</div>
+    <div class="panel">
+      <div class="bars">
+        {% set maxc = (by_branch|map(attribute='c')|max) if by_branch else 1 %}
+        {% for b in by_branch %}
+        <div class="bar-row">
+          <div class="bar-label">{{ b.branch }}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:{{ (100 * b.c / maxc)|round(0,'floor') }}%"></div></div>
+          <div class="bar-val">{{ b.c }}</div>
+        </div>
+        {% else %}
+        <div class="empty">NO DATA</div>
+        {% endfor %}
+      </div>
+    </div>
+    <a href="{{ url_for('analytics') }}" class="btn btn-block" style="margin-top:14px">◇ Open Strategic Analytics</a>
+  </section>
+</div>
+{% endblock %}

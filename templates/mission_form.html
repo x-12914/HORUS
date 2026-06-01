@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New Mission' if action=='new' else 'Edit Mission' }}{% endblock %}
+{% block crumb %}{{ 'Record New Mission' if action=='new' else 'Amend Mission Record' }}{% endblock %}
+
+{% block content %}
+{% set m = mission %}
+<form method="post" action="{{ url_for('mission_new') if action=='new' else url_for('mission_edit', mission_id=m.id) }}">
+  <div class="panel">
+    <div class="section-title">Identification</div>
+    <div class="form-grid">
+      <div>
+        <label>Codename *</label>
+        <input name="codename" required value="{{ m.codename if m else '' }}" placeholder="e.g. IRON SENTINEL">
+      </div>
+      <div>
+        <label>Operation Name *</label>
+        <input name="operation_name" required value="{{ m.operation_name if m else '' }}" placeholder="Full operation title">
+      </div>
+      <div>
+        <label>Branch</label>
+        <select name="branch">
+          {% for b in vocab.branches %}<option value="{{ b }}" {{ 'selected' if m and m.branch==b }}>{{ b }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Classification</label>
+        <select name="classification">
+          {% for c in vocab.classifications %}<option value="{{ c }}" {{ 'selected' if (m and m.classification==c) or (not m and c=='RESTRICTED') }}>{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Commanding Officer</label>
+        <input name="commander" value="{{ m.commander if m else '' }}" placeholder="Rank &amp; name">
+      </div>
+      <div>
+        <label>Location / Theatre</label>
+        <input name="location" value="{{ m.location if m else '' }}" placeholder="AO / region">
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="section-title">Timeline &amp; Disposition</div>
+    <div class="form-grid">
+      <div>
+        <label>Start Date</label>
+        <input type="date" name="start_date" value="{{ m.start_date if m else '' }}">
+      </div>
+      <div>
+        <label>End Date</label>
+        <input type="date" name="end_date" value="{{ m.end_date if m else '' }}">
+      </div>
+      <div>
+        <label>Status</label>
+        <select name="status">
+          {% for s in vocab.statuses %}<option value="{{ s }}" {{ 'selected' if (m and m.status==s) or (not m and s=='PLANNED') }}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Outcome</label>
+        <select name="outcome">
+          {% for o in vocab.outcomes %}<option value="{{ o }}" {{ 'selected' if (m and m.outcome==o) or (not m and o=='PENDING') }}>{{ o }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="section-title">Objective &amp; Outcome Narrative</div>
+    <div class="form-grid">
+      <div class="full">
+        <label>Mission Objective</label>
+        <textarea name="objective" placeholder="Primary intent and tasked objective...">{{ m.objective if m else '' }}</textarea>
+      </div>
+      <div class="full">
+        <label>Outcome / Summary</label>
+        <textarea name="summary" placeholder="Result narrative, key takeaways...">{{ m.summary if m else '' }}</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row" style="margin-top:18px">
+    <button class="btn btn-primary" type="submit">▣ {{ 'Commit Record' if action=='new' else 'Save Changes' }}</button>
+    <a class="btn" href="{{ url_for('mission_detail', mission_id=m.id) if m else url_for('missions') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

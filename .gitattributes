@@ -1,0 +1,6 @@
+# Normalize line endings to LF so files behave on the Linux VPS,
+# regardless of the OS they were committed from.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}DEFENSE-LOG{% endblock %} :: Operation Recording System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <!-- Classification banner -->
+  <div class="classbar">// RESTRICTED // FOR OFFICIAL USE ONLY // MINISTRY OF DEFENCE //</div>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">▚</div>
+        <div>
+          <div class="brand-name">DEFENSE&#8209;LOG</div>
+          <div class="brand-sub">OPERATION RECORDING SYS</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint=='dashboard' }}"><span>◉</span> Command Deck</a>
+        <a href="{{ url_for('missions') }}" class="{{ 'active' if request.endpoint in ('missions','mission_detail','mission_new','mission_edit') }}"><span>▣</span> Missions</a>
+        <a href="{{ url_for('casualties_register') }}" class="{{ 'active' if request.endpoint=='casualties_register' }}"><span>✚</span> Casualty Register</a>
+        <a href="{{ url_for('reports') }}" class="{{ 'active' if request.endpoint=='reports' }}"><span>▤</span> Reports</a>
+        <a href="{{ url_for('analytics') }}" class="{{ 'active' if request.endpoint=='analytics' }}"><span>◇</span> Strategic Analytics</a>
+      </nav>
+
+      <a href="{{ url_for('mission_new') }}" class="btn btn-primary btn-block">+ NEW MISSION</a>
+
+      <div class="sidebar-foot">
+        <div class="status-dot"></div> SYSTEM ONLINE
+        <div class="clock" id="clock">--:--:--</div>
+        <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-top:6px">
+          <span>OP: <b style="color:var(--green)">{{ current_user|default('—') }}</b></span>
+          <a href="{{ url_for('logout') }}" style="color:var(--amber)">[ LOGOUT ]</a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <header class="topbar">
+        <div class="crumb">{% block crumb %}{% endblock %}</div>
+        <div class="topbar-meta">
+          <span>OPERATOR: <b>{{ current_user|default('CMD-AUTH') }}</b>{% if current_role %} <span class="muted">({{ current_role|upper }})</span>{% endif %}</span>
+          <span class="sep">|</span>
+          <span id="datestamp">{{ now.strftime('%d %b %Y') | upper }}</span>
+        </div>
+      </header>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flashes">
+          {% for cat, msg in messages %}
+            <div class="flash flash-{{ cat }}">▸ {{ msg }}</div>
+          {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <div class="content">
+        {% block content %}{% endblock %}
+      </div>
+
+      <footer class="foot">
+        DEFENSE-LOG v1.0 &nbsp;//&nbsp; Historical Operations Database &nbsp;//&nbsp; Built for transparency &amp; accountability
+      </footer>
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

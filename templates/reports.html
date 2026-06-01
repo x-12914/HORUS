@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "macros.html" import report_badge %}
+{% block title %}Reports{% endblock %}
+{% block crumb %}Report Archive{% endblock %}
+
+{% block content %}
+<form class="filterbar" method="get" action="{{ url_for('reports') }}">
+  <div class="field">
+    <label>Report Type</label>
+    <select name="type" onchange="this.form.submit()">
+      <option value="">ALL TYPES</option>
+      {% for t in vocab.report_types %}<option value="{{ t }}" {{ 'selected' if f_type==t }}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <a class="btn" href="{{ url_for('reports') }}">Reset</a>
+</form>
+
+{% for r in reports %}
+<div class="rec">
+  <div class="rec-head">
+    <div class="rec-title">
+      {{ report_badge(r.report_type) }}
+      <b style="margin-left:6px">{{ r.title }}</b>
+    </div>
+    <a class="btn btn-sm" href="{{ url_for('mission_detail', mission_id=r.mission_id) }}#reports">Open Dossier →</a>
+  </div>
+  <div class="rec-meta">
+    OP: {{ r.codename }} ({{ r.operation_name }}) &nbsp;//&nbsp;
+    BY: {{ r.author or 'UNATTRIBUTED' }} &nbsp;//&nbsp; {{ r.created_at }}
+  </div>
+  {% if r.content %}<div class="rec-body" style="white-space:pre-wrap">{{ r.content|truncate(280) }}</div>{% endif %}
+</div>
+{% else %}
+<div class="empty" style="padding:40px">NO REPORTS ON FILE</div>
+{% endfor %}
+<p class="muted" style="margin-top:12px; font-size:11px; letter-spacing:1px">{{ reports|length }} REPORT(S)</p>
+{% endblock %}
