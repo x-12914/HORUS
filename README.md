@@ -13,6 +13,7 @@ challenges, and turns the accumulated record into analytics that support
 - **Mission Registry** — record, search, filter, edit and purge operations. Tracks codename, branch, classification, commander, theatre, timeline, status and outcome.
 - **Mission Dossier** — a full per-mission file with linked **casualties**, **operational challenges** and **reports** (AAR / SITREP / INTEL / DEBRIEF), each added inline.
 - **Casualty Register** — cross-mission roll-up of KIA / WIA / MIA / POW.
+- **Drone Feed** — assign multiple drones to each mission (callsign, model, status, live URL); a per-mission feed grid plus an aggregate **video wall** of every feed across all missions. Shows an OFFLINE placeholder until a live stream URL is connected.
 - **Report Archive** — every filed report in one searchable place.
 - **Strategic Analytics** — missions by branch/outcome/status, casualties by type/branch, challenges by category, and a year-over-year historical trend line.
 

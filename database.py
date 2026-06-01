@@ -65,6 +65,29 @@ def _ensure_column(conn, table, column, ddl):
         conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
 
 
+def _migrate_legacy_drone_feed(conn):
+    """Move the old single missions.drone_feed_url into the drone_feeds table.
+
+    Idempotent: only copies rows whose URL is set and not already present in
+    drone_feeds. Runs harmlessly when there is nothing to migrate.
+    """
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(missions)")}
+    if "drone_feed_url" not in cols:
+        return
+    conn.execute(
+        """
+        INSERT INTO drone_feeds (mission_id, callsign, feed_url, status)
+        SELECT m.id, 'UAV-01', m.drone_feed_url, 'ONLINE'
+        FROM missions m
+        WHERE m.drone_feed_url IS NOT NULL AND m.drone_feed_url != ''
+          AND NOT EXISTS (
+              SELECT 1 FROM drone_feeds d
+              WHERE d.mission_id = m.id AND d.feed_url = m.drone_feed_url
+          )
+        """
+    )
+
+
 def init_db():
     """Create tables from schema.sql and apply migrations. Safe to call repeatedly."""
     conn = sqlite3.connect(DB_PATH)
@@ -75,6 +98,7 @@ def init_db():
         conn.executescript(f.read())
     for table, column, ddl in MIGRATIONS:
         _ensure_column(conn, table, column, ddl)
+    _migrate_legacy_drone_feed(conn)
     conn.commit()
     conn.close()
 

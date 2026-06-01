@@ -306,6 +306,24 @@ select{ appearance:none; background-image:linear-gradient(45deg,transparent 50%,
 .feed-meta{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:12px; font-size:12px; }
 .feed-live{ color:var(--red); letter-spacing:1.5px; font-size:12px; animation:pulse 1.6s infinite; }
 
+/* Multi-drone wall + tiles -----------------------------------------------*/
+.feed-wall{
+  display:grid; gap:16px;
+  grid-template-columns:repeat(auto-fill, minmax(310px, 1fr));
+}
+.feed-tile{
+  background:linear-gradient(180deg,var(--panel),var(--bg-2));
+  border:1px solid var(--line); border-radius:6px; overflow:hidden;
+}
+.feed-tile .feed-frame{ border:0; border-bottom:1px solid var(--line); border-radius:0; }
+.feed-tilebar{
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+  padding:11px 13px;
+}
+.feed-tileinfo b{ color:#e6f0e9; letter-spacing:.5px; }
+.feed-editbox{ margin:0 13px 13px; padding:13px; }
+.feed-editbox summary{ font-size:11px; }
+
 hr.div{ border:none; border-top:1px solid var(--line); margin:24px 0; }
 .muted{ color:var(--txt-dim); }
 .center{ text-align:center; }

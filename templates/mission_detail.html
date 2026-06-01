@@ -54,36 +54,41 @@
 
 <hr class="div">
 
-<!-- ============ DRONE FEED ============ -->
+<!-- ============ DRONE FEEDS (many per mission) ============ -->
 <section id="dronefeed">
-  <div class="section-title">Drone Feed</div>
-  {% if m.drone_feed_url %}
-    <div class="feed-frame">
-      <iframe src="{{ m.drone_feed_url }}" allow="autoplay; fullscreen" allowfullscreen
-              referrerpolicy="no-referrer"></iframe>
-    </div>
-    <div class="feed-meta">
-      <span class="feed-live">● LIVE</span>
-      <span class="muted">SOURCE: {{ m.drone_feed_url }}</span>
-      <a class="btn btn-sm" href="{{ m.drone_feed_url }}" target="_blank" rel="noopener">Open feed ↗</a>
-    </div>
+  <div class="section-title">Drone Feeds &nbsp;<span class="muted" style="font-size:11px">[ {{ feeds|length }} ASSIGNED ]</span></div>
+
+  {% if feeds %}
+  <div class="feed-wall">
+    {% for d in feeds %}
+    {% include "_feed_tile.html" %}
+    {% endfor %}
+  </div>
   {% else %}
-    <div class="feed-frame feed-offline">
-      <div class="feed-grid"></div>
-      <div class="feed-placeholder">
-        <div class="feed-eye">◉</div>
-        <div class="feed-status">SIGNAL OFFLINE — NO FEED ASSIGNED</div>
-        <div class="feed-sub">Live drone footage will appear here once the feed is connected.</div>
-      </div>
-      <div class="feed-corner tl">REC ●</div>
-      <div class="feed-corner tr">UAV-00</div>
-      <div class="feed-corner bl">LAT --.------ LON --.------</div>
-      <div class="feed-corner br">NO SIGNAL</div>
-    </div>
-    <div class="feed-meta">
-      <span class="muted">▸ Add a feed URL via <a href="{{ url_for('mission_edit', mission_id=m.id) }}" style="color:var(--green)">Edit mission</a> when the live drone stream is available.</span>
-    </div>
+  <div class="empty">NO DRONES ASSIGNED TO THIS OPERATION</div>
   {% endif %}
+
+  <details class="addbox">
+    <summary>Assign Drone Feed</summary>
+    <form method="post" action="{{ url_for('feed_add', mission_id=m.id) }}">
+      <div class="form-grid">
+        <div><label>Callsign *</label><input name="callsign" required placeholder="e.g. UAV-01 / REAPER-3"></div>
+        <div><label>Model / Type</label><input name="model" placeholder="e.g. MQ-9, Quadcopter"></div>
+        <div class="full">
+          <label>Live Feed URL</label>
+          <input name="feed_url" placeholder="Leave blank for now — footage to be connected later">
+        </div>
+        <div>
+          <label>Status</label>
+          <select name="status">
+            {% for s in vocab.feed_statuses %}<option {{ 'selected' if s=='OFFLINE' }}>{{ s }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="full"><label>Notes</label><input name="notes" placeholder="Tasking / sensor / area"></div>
+      </div>
+      <div style="margin-top:14px"><button class="btn btn-primary" type="submit">⬡ Assign Drone</button></div>
+    </form>
+  </details>
 </section>
 
 <hr class="div">

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Drone Feed{% endblock %}
+{% block crumb %}Drone Feed — Live Wall{% endblock %}
+
+{% block content %}
+<div class="grid grid-stats" style="margin-bottom:18px">
+  <div class="stat"><div class="stat-label">Total Drones</div><div class="stat-value">{{ counts.total or 0 }}</div></div>
+  <div class="stat"><div class="stat-label">Online</div><div class="stat-value green">{{ counts.online or 0 }}</div></div>
+  <div class="stat amber"><div class="stat-label">Offline</div><div class="stat-value amber">{{ counts.offline or 0 }}</div></div>
+  <div class="stat blue"><div class="stat-label">Live URL Connected</div><div class="stat-value blue">{{ counts.with_url or 0 }}</div></div>
+</div>
+
+<form class="filterbar" method="get" action="{{ url_for('feeds_wall') }}">
+  <div class="field">
+    <label>Status</label>
+    <select name="status" onchange="this.form.submit()">
+      <option value="">ALL</option>
+      {% for s in vocab.feed_statuses %}<option value="{{ s }}" {{ 'selected' if f_status==s }}>{{ s }}</option>{% endfor %}
+    </select>
+  </div>
+  <a class="btn" href="{{ url_for('feeds_wall') }}">Reset</a>
+</form>
+
+{% set wall = true %}
+{% if feeds %}
+<div class="feed-wall">
+  {% for d in feeds %}{% include "_feed_tile.html" %}{% endfor %}
+</div>
+<p class="muted" style="margin-top:14px; font-size:11px; letter-spacing:1px">{{ feeds|length }} FEED(S) DISPLAYED</p>
+{% else %}
+<div class="empty" style="padding:50px">
+  NO DRONE FEEDS{% if f_status %} MATCH STATUS "{{ f_status }}"{% endif %} —
+  assign drones from any <a href="{{ url_for('missions') }}" style="color:var(--green)">mission dossier</a>.
+</div>
+{% endif %}
+{% endblock %}

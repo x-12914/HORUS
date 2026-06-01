@@ -29,3 +29,8 @@
   {%- set m = {'AAR':'b-green','SITREP':'b-blue','INTEL':'b-purple','DEBRIEF':'b-amber'} -%}
   <span class="badge {{ m.get(t,'b-grey') }}">{{ t }}</span>
 {% endmacro %}
+
+{% macro feed_status_badge(s) %}
+  {%- set m = {'ONLINE':'b-green','STANDBY':'b-amber','LOST':'b-red','OFFLINE':'b-grey'} -%}
+  <span class="badge {{ m.get(s,'b-grey') }}">{{ s }}</span>
+{% endmacro %}

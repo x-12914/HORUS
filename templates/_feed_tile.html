@@ -1,0 +1,58 @@
+{# One drone-feed tile. Expects `d` (a drone_feeds row). When `wall` is true it
+   shows a link to the mission; otherwise it shows dossier edit/delete controls. #}
+{% from "macros.html" import feed_status_badge %}
+{% set is_wall = wall|default(false) %}
+<div class="feed-tile">
+  <div class="feed-frame {{ '' if d.feed_url else 'feed-offline' }}">
+    {% if d.feed_url %}
+      <iframe src="{{ d.feed_url }}" allow="autoplay; fullscreen" allowfullscreen referrerpolicy="no-referrer"></iframe>
+    {% else %}
+      <div class="feed-grid"></div>
+      <div class="feed-placeholder">
+        <div class="feed-eye">◉</div>
+        <div class="feed-status">SIGNAL OFFLINE</div>
+        <div class="feed-sub">Awaiting live footage</div>
+      </div>
+    {% endif %}
+    <div class="feed-corner tl">{{ '● LIVE' if d.feed_url else 'NO SIGNAL' }}</div>
+    <div class="feed-corner tr">{{ d.callsign }}</div>
+    {% if is_wall %}<div class="feed-corner bl">{{ d.codename }}</div>{% endif %}
+    <div class="feed-corner br">{{ d.model or 'UAV' }}</div>
+  </div>
+
+  <div class="feed-tilebar">
+    <div class="feed-tileinfo">
+      <b>{{ d.callsign }}</b> {{ feed_status_badge(d.status) }}
+      {% if is_wall %}<span class="muted" style="font-size:11px; display:block; margin-top:3px">{{ d.codename }} <span style="opacity:.6">/ {{ d.operation_name }}</span></span>{% endif %}
+      {% if d.notes and not is_wall %}<div class="muted" style="font-size:11px; margin-top:3px">{{ d.notes }}</div>{% endif %}
+    </div>
+    <div class="btn-row">
+      {% if is_wall %}
+        <a class="btn btn-sm" href="{{ url_for('mission_detail', mission_id=d.mission_id) }}#dronefeed">Dossier →</a>
+      {% else %}
+        <form class="inline-form" method="post" action="{{ url_for('feed_delete', fid=d.id) }}" data-confirm="Remove drone {{ d.callsign }}?">
+          <button class="btn btn-sm btn-danger" type="submit" title="Remove drone">✕</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not is_wall %}
+  <details class="addbox feed-editbox">
+    <summary>Edit / connect feed</summary>
+    <form method="post" action="{{ url_for('feed_edit', fid=d.id) }}">
+      <div class="form-grid">
+        <div><label>Callsign</label><input name="callsign" value="{{ d.callsign }}"></div>
+        <div><label>Model / Type</label><input name="model" value="{{ d.model or '' }}"></div>
+        <div class="full"><label>Live Feed URL</label><input name="feed_url" value="{{ d.feed_url or '' }}" placeholder="Paste the stream URL when footage is ready"></div>
+        <div>
+          <label>Status</label>
+          <select name="status">{% for s in vocab.feed_statuses %}<option {{ 'selected' if d.status==s }}>{{ s }}</option>{% endfor %}</select>
+        </div>
+        <div class="full"><label>Notes</label><input name="notes" value="{{ d.notes or '' }}"></div>
+      </div>
+      <div style="margin-top:12px"><button class="btn btn-primary btn-sm" type="submit">Save Feed</button></div>
+    </form>
+  </details>
+  {% endif %}
+</div>

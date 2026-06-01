@@ -105,12 +105,13 @@ CHALLENGE_CATEGORIES = [
 ]
 SEVERITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
 REPORT_TYPES = ["AAR", "SITREP", "INTEL", "DEBRIEF"]
+FEED_STATUSES = ["ONLINE", "OFFLINE", "STANDBY", "LOST"]
 
 VOCAB = dict(
     branches=BRANCHES, classifications=CLASSIFICATIONS, statuses=STATUSES,
     outcomes=OUTCOMES, casualty_types=CASUALTY_TYPES,
     challenge_categories=CHALLENGE_CATEGORIES, severities=SEVERITIES,
-    report_types=REPORT_TYPES,
+    report_types=REPORT_TYPES, feed_statuses=FEED_STATUSES,
 )
 
 
@@ -202,16 +203,15 @@ def mission_new():
         mid = db.execute(
             """INSERT INTO missions
                (codename, operation_name, branch, classification, commander,
-                location, objective, start_date, end_date, status, outcome, summary,
-                drone_feed_url)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                location, objective, start_date, end_date, status, outcome, summary)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 _form("codename"), _form("operation_name"), _form("branch", "Army"),
                 _form("classification", "RESTRICTED"), _form("commander"),
                 _form("location"), _form("objective"),
                 _form("start_date") or None, _form("end_date") or None,
                 _form("status", "PLANNED"), _form("outcome", "PENDING"),
-                _form("summary"), _form("drone_feed_url") or None,
+                _form("summary"),
             ),
         )
         flash(f"Mission record created — ID #{mid:04d}.", "success")
@@ -235,9 +235,13 @@ def mission_detail(mission_id):
         "SELECT * FROM reports WHERE mission_id = ? ORDER BY datetime(created_at) DESC",
         (mission_id,),
     )
+    feeds = db.query(
+        "SELECT * FROM drone_feeds WHERE mission_id = ? ORDER BY callsign, id",
+        (mission_id,),
+    )
     return render_template(
         "mission_detail.html", mission=mission, casualties=casualties,
-        challenges=challenges, reports=reports,
+        challenges=challenges, reports=reports, feeds=feeds,
     )
 
 
@@ -251,14 +255,14 @@ def mission_edit(mission_id):
             """UPDATE missions SET
                codename=?, operation_name=?, branch=?, classification=?, commander=?,
                location=?, objective=?, start_date=?, end_date=?, status=?,
-               outcome=?, summary=?, drone_feed_url=? WHERE id=?""",
+               outcome=?, summary=? WHERE id=?""",
             (
                 _form("codename"), _form("operation_name"), _form("branch", "Army"),
                 _form("classification", "RESTRICTED"), _form("commander"),
                 _form("location"), _form("objective"),
                 _form("start_date") or None, _form("end_date") or None,
                 _form("status", "PLANNED"), _form("outcome", "PENDING"),
-                _form("summary"), _form("drone_feed_url") or None, mission_id,
+                _form("summary"), mission_id,
             ),
         )
         flash("Mission record updated.", "success")
@@ -376,6 +380,79 @@ def report_delete(rid):
     db.execute("DELETE FROM reports WHERE id=?", (rid,))
     flash("Report removed.", "warning")
     return redirect(url_for("mission_detail", mission_id=row["mission_id"]) + "#reports")
+
+
+# ===========================================================================
+# Drone feeds (many per mission)
+# ===========================================================================
+@app.route("/missions/<int:mission_id>/feeds", methods=["POST"])
+def feed_add(mission_id):
+    if not db.query("SELECT id FROM missions WHERE id=?", (mission_id,), one=True):
+        abort(404)
+    url = _form("feed_url") or None
+    # Default status: ONLINE if a URL is supplied, otherwise OFFLINE.
+    status = _form("status") or ("ONLINE" if url else "OFFLINE")
+    db.execute(
+        """INSERT INTO drone_feeds (mission_id, callsign, model, feed_url, status, notes)
+           VALUES (?,?,?,?,?,?)""",
+        (mission_id, _form("callsign", "UAV"), _form("model"), url, status, _form("notes")),
+    )
+    flash("Drone feed assigned.", "success")
+    return redirect(url_for("mission_detail", mission_id=mission_id) + "#dronefeed")
+
+
+@app.route("/feeds/<int:fid>/edit", methods=["POST"])
+def feed_edit(fid):
+    row = db.query("SELECT mission_id FROM drone_feeds WHERE id=?", (fid,), one=True)
+    if not row:
+        abort(404)
+    db.execute(
+        """UPDATE drone_feeds SET callsign=?, model=?, feed_url=?, status=?, notes=?
+           WHERE id=?""",
+        (
+            _form("callsign", "UAV"), _form("model"), _form("feed_url") or None,
+            _form("status", "OFFLINE"), _form("notes"), fid,
+        ),
+    )
+    flash("Drone feed updated.", "success")
+    return redirect(url_for("mission_detail", mission_id=row["mission_id"]) + "#dronefeed")
+
+
+@app.route("/feeds/<int:fid>/delete", methods=["POST"])
+def feed_delete(fid):
+    row = db.query("SELECT mission_id FROM drone_feeds WHERE id=?", (fid,), one=True)
+    if not row:
+        abort(404)
+    db.execute("DELETE FROM drone_feeds WHERE id=?", (fid,))
+    flash("Drone feed removed.", "warning")
+    return redirect(url_for("mission_detail", mission_id=row["mission_id"]) + "#dronefeed")
+
+
+@app.route("/feeds")
+def feeds_wall():
+    """Aggregate video wall — every drone feed across every mission."""
+    status = request.args.get("status", "")
+    sql = (
+        "SELECT d.*, m.codename, m.operation_name, m.status AS mission_status "
+        "FROM drone_feeds d JOIN missions m ON m.id = d.mission_id WHERE 1=1"
+    )
+    params = []
+    if status:
+        sql += " AND d.status = ?"
+        params.append(status)
+    sql += " ORDER BY (d.feed_url IS NULL), m.codename, d.callsign"
+    feeds = db.query(sql, params)
+
+    counts = db.query(
+        """SELECT
+             COUNT(*) AS total,
+             SUM(CASE WHEN status='ONLINE'  THEN 1 ELSE 0 END) AS online,
+             SUM(CASE WHEN status='OFFLINE' THEN 1 ELSE 0 END) AS offline,
+             SUM(CASE WHEN feed_url IS NOT NULL AND feed_url!='' THEN 1 ELSE 0 END) AS with_url
+           FROM drone_feeds""",
+        one=True,
+    )
+    return render_template("feeds.html", feeds=feeds, counts=counts, f_status=status)
 
 
 # ===========================================================================

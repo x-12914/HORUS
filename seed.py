@@ -84,6 +84,19 @@ CHALLENGES = [
     (7, "Equipment", "HIGH", "Accumulating airframe hours raising maintenance risk.", "Maintenance surge scheduled; flight hours capped."),
 ]
 
+# (mission_index, callsign, model, feed_url, status, notes)
+# Footage is not yet wired up, so these seed as OFFLINE placeholders to show
+# the wall populated. Connect a real URL later via the dossier.
+DRONES = [
+    (0, "UAV-01", "MQ-9 Reaper", None, "OFFLINE", "Overwatch, northern line"),
+    (0, "UAV-02", "Quadcopter", None, "STANDBY", "Close recon"),
+    (2, "REAPER-3", "MQ-9 Reaper", None, "OFFLINE", "Compound ISR"),
+    (3, "HAWKEYE-1", "Fixed-wing", None, "OFFLINE", "Corridor patrol"),
+    (4, "UAV-07", "Quadcopter", None, "STANDBY", "Pass overwatch"),
+    (4, "UAV-08", "Quadcopter", None, "OFFLINE", "Resupply route"),
+    (7, "SKYLIFT-1", "Cargo UAS", None, "OFFLINE", "Airlift escort"),
+]
+
 # (mission_index, title, type, author, content)
 REPORTS = [
     (0, "After-Action Review — IRON SENTINEL", "AAR", "Col. A. Marwan",
@@ -127,6 +140,11 @@ def seed_if_empty(DB_PATH):
         cur.execute(
             """INSERT INTO challenges (mission_id, category, severity, description, resolution)
                VALUES (?,?,?,?,?)""", (mission_ids[idx], *rest))
+
+    for idx, *rest in DRONES:
+        cur.execute(
+            """INSERT INTO drone_feeds (mission_id, callsign, model, feed_url, status, notes)
+               VALUES (?,?,?,?,?,?)""", (mission_ids[idx], *rest))
 
     for idx, *rest in REPORTS:
         cur.execute(

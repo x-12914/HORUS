@@ -79,19 +79,15 @@
     </div>
   </div>
 
+  {% if action == 'edit' %}
   <div class="panel">
-    <div class="section-title">Drone Feed</div>
-    <div class="form-grid">
-      <div class="full">
-        <label>Live Drone Feed Source (URL)</label>
-        <input name="drone_feed_url" value="{{ m.drone_feed_url if m else '' }}"
-               placeholder="e.g. https://feed.example/stream — leave blank, live footage to be connected later">
-        <div class="muted" style="font-size:11px; margin-top:6px; letter-spacing:.5px">
-          ▸ Optional. Leave empty for now — the dossier shows an OFFLINE placeholder until a feed URL is added.
-        </div>
-      </div>
-    </div>
+    <div class="section-title">Drone Feeds</div>
+    <p class="muted" style="font-size:12px; letter-spacing:.5px; margin:0">
+      ▸ Drones are managed on the mission dossier — a mission can carry several.
+      Save this record, then use <b style="color:var(--green)">Assign Drone Feed</b> on the dossier.
+    </p>
   </div>
+  {% endif %}
 
   <div class="btn-row" style="margin-top:18px">
     <button class="btn btn-primary" type="submit">▣ {{ 'Commit Record' if action=='new' else 'Save Changes' }}</button>

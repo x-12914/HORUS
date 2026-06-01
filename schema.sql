@@ -32,6 +32,20 @@ CREATE TABLE IF NOT EXISTS missions (
     created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Drone feeds assigned to a mission. A mission may have many drones; each
+-- feed carries its own callsign and (eventually) a live stream URL. Until a
+-- URL is supplied the dossier/wall renders an OFFLINE placeholder.
+CREATE TABLE IF NOT EXISTS drone_feeds (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    mission_id      INTEGER NOT NULL REFERENCES missions(id) ON DELETE CASCADE,
+    callsign        TEXT    NOT NULL DEFAULT 'UAV',  -- e.g. UAV-01, REAPER-3
+    model           TEXT,                            -- e.g. MQ-9, Quadcopter
+    feed_url        TEXT,                            -- live stream URL (nullable)
+    status          TEXT    NOT NULL DEFAULT 'OFFLINE', -- ONLINE/OFFLINE/STANDBY/LOST
+    notes           TEXT,
+    created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Personnel casualties documented per mission.
 CREATE TABLE IF NOT EXISTS casualties (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,6 +80,7 @@ CREATE TABLE IF NOT EXISTS reports (
     created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_casualties_mission ON casualties(mission_id);
-CREATE INDEX IF NOT EXISTS idx_challenges_mission ON challenges(mission_id);
-CREATE INDEX IF NOT EXISTS idx_reports_mission    ON reports(mission_id);
+CREATE INDEX IF NOT EXISTS idx_casualties_mission  ON casualties(mission_id);
+CREATE INDEX IF NOT EXISTS idx_challenges_mission  ON challenges(mission_id);
+CREATE INDEX IF NOT EXISTS idx_reports_mission     ON reports(mission_id);
+CREATE INDEX IF NOT EXISTS idx_drone_feeds_mission ON drone_feeds(mission_id);

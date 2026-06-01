@@ -27,6 +27,7 @@
         <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint=='dashboard' }}"><span>◉</span> Command Deck</a>
         <a href="{{ url_for('missions') }}" class="{{ 'active' if request.endpoint in ('missions','mission_detail','mission_new','mission_edit') }}"><span>▣</span> Missions</a>
         <a href="{{ url_for('casualties_register') }}" class="{{ 'active' if request.endpoint=='casualties_register' }}"><span>✚</span> Casualty Register</a>
+        <a href="{{ url_for('feeds_wall') }}" class="{{ 'active' if request.endpoint=='feeds_wall' }}"><span>⬡</span> Drone Feed</a>
         <a href="{{ url_for('reports') }}" class="{{ 'active' if request.endpoint=='reports' }}"><span>▤</span> Reports</a>
         <a href="{{ url_for('analytics') }}" class="{{ 'active' if request.endpoint=='analytics' }}"><span>◇</span> Strategic Analytics</a>
       </nav>
