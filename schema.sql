@@ -69,6 +69,35 @@ CREATE TABLE IF NOT EXISTS challenges (
     resolution      TEXT
 );
 
+-- Facility rooms / zones. A BLE gateway in each room reports which tagged
+-- assets it can currently see; `code` is the identifier the gateway maps to.
+CREATE TABLE IF NOT EXISTS rooms (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    name            TEXT    NOT NULL,
+    code            TEXT,                 -- gateway/zone code, e.g. ARM-A
+    zone            TEXT,                 -- building / block
+    description     TEXT,
+    created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Trackable inventory assets. Each is a unique item carrying its own BLE tag
+-- (device_id). Location is hardware-driven: current_room_id / presence /
+-- last_seen stay UNKNOWN until the BLE tracking hardware is connected.
+CREATE TABLE IF NOT EXISTS assets (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    asset_tag       TEXT    NOT NULL UNIQUE,  -- inventory tag, e.g. AST-0001
+    name            TEXT    NOT NULL,
+    category        TEXT    NOT NULL DEFAULT 'General',
+    serial          TEXT,
+    device_id       TEXT,                 -- BLE beacon/tag id (nullable)
+    tracking_status TEXT    NOT NULL DEFAULT 'AWAITING HARDWARE', -- AWAITING HARDWARE/LIVE/LOST/DISABLED
+    current_room_id INTEGER REFERENCES rooms(id) ON DELETE SET NULL,
+    presence        TEXT    NOT NULL DEFAULT 'UNKNOWN', -- UNKNOWN/IN FACILITY/LEFT FACILITY
+    last_seen       TEXT,                 -- timestamp of last BLE fix (nullable)
+    notes           TEXT,
+    created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
 -- After-action reports, situation reports, intel debriefs, etc.
 CREATE TABLE IF NOT EXISTS reports (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,3 +113,5 @@ CREATE INDEX IF NOT EXISTS idx_casualties_mission  ON casualties(mission_id);
 CREATE INDEX IF NOT EXISTS idx_challenges_mission  ON challenges(mission_id);
 CREATE INDEX IF NOT EXISTS idx_reports_mission     ON reports(mission_id);
 CREATE INDEX IF NOT EXISTS idx_drone_feeds_mission ON drone_feeds(mission_id);
+CREATE INDEX IF NOT EXISTS idx_assets_room          ON assets(current_room_id);
+CREATE INDEX IF NOT EXISTS idx_assets_device        ON assets(device_id);

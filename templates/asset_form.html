@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Register Asset' if action=='new' else 'Edit Asset' }}{% endblock %}
+{% block crumb %}{{ 'Register Asset' if action=='new' else 'Edit Asset' }}{% endblock %}
+
+{% block content %}
+{% set a = asset %}
+<form method="post" action="{{ url_for('asset_new') if action=='new' else url_for('asset_edit', asset_id=a.id) }}">
+  <div class="panel">
+    <div class="section-title">Asset Identification</div>
+    <div class="form-grid">
+      <div>
+        <label>Asset Tag *</label>
+        <input name="asset_tag" required value="{{ a.asset_tag if a else '' }}" placeholder="e.g. AST-0001">
+      </div>
+      <div>
+        <label>Item Name *</label>
+        <input name="name" required value="{{ a.name if a else '' }}" placeholder="e.g. Assault Rifle A4">
+      </div>
+      <div>
+        <label>Category</label>
+        <select name="category">
+          {% for c in vocab.asset_categories %}<option {{ 'selected' if a and a.category==c }}>{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Serial Number</label>
+        <input name="serial" value="{{ a.serial if a else '' }}">
+      </div>
+      <div class="full">
+        <label>Notes</label>
+        <input name="notes" value="{{ a.notes if a else '' }}">
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="section-title">BLE Tracking Device</div>
+    <div class="form-grid">
+      <div>
+        <label>BLE Device / Tag ID</label>
+        <input name="device_id" value="{{ a.device_id if a else '' }}" placeholder="e.g. DEV-0001 (assign when tagged)">
+      </div>
+      <div>
+        <label>Tracking Status</label>
+        <select name="tracking_status">
+          {% for s in vocab.tracking_statuses %}<option {{ 'selected' if (a and a.tracking_status==s) or (not a and s=='AWAITING HARDWARE') }}>{{ s }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="muted" style="font-size:11px; margin-top:10px; letter-spacing:.5px">
+      ▸ Assign the BLE tag ID the gateway will report for this asset. Leave status on
+      <b>AWAITING HARDWARE</b> until the trackers are installed.
+    </div>
+  </div>
+
+  {% if action == 'edit' %}
+  <div class="panel">
+    <div class="section-title">Location (normally set by hardware)</div>
+    <div class="form-grid">
+      <div>
+        <label>Current Room</label>
+        <select name="current_room_id">
+          <option value="">— Unknown —</option>
+          {% for r in rooms %}<option value="{{ r.id }}" {{ 'selected' if a and a.current_room_id==r.id }}>{{ r.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Presence</label>
+        <select name="presence">
+          {% for p in vocab.presence_states %}<option {{ 'selected' if a and a.presence==p }}>{{ p }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="muted" style="font-size:11px; margin-top:10px; letter-spacing:.5px">
+      ▸ Once BLE hardware is live this is updated automatically. You can set it manually here for testing.
+      {% if a and a.last_seen %}Last fix: <b>{{ a.last_seen }}</b>.{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="btn-row" style="margin-top:18px">
+    <button class="btn btn-primary" type="submit">◎ {{ 'Register Asset' if action=='new' else 'Save Changes' }}</button>
+    <a class="btn" href="{{ url_for('assets_list') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

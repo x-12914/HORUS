@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Facility Rooms{% endblock %}
+{% block crumb %}Facility Rooms{% endblock %}
+
+{% block content %}
+<div class="cols-2">
+  <div>
+    <div class="section-title">Rooms / Zones</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Room</th><th>Code</th><th>Zone</th><th>Assets</th><th></th></tr></thead>
+        <tbody>
+          {% for r in rooms %}
+          <tr>
+            <td><b>{{ r.name }}</b>{% if r.description %}<div class="muted" style="font-size:11px">{{ r.description }}</div>{% endif %}</td>
+            <td class="mono-id">{{ r.code or '—' }}</td>
+            <td>{{ r.zone or '—' }}</td>
+            <td><span class="badge b-grey">{{ r.asset_count }}</span></td>
+            <td style="white-space:nowrap">
+              <details class="inline-form">
+                <summary class="btn btn-sm" style="list-style:none">✎</summary>
+                <div class="panel" style="position:absolute; z-index:20; margin-top:6px; width:280px">
+                  <form method="post" action="{{ url_for('room_edit', room_id=r.id) }}">
+                    <div style="margin-bottom:8px"><label>Name</label><input name="name" value="{{ r.name }}" required></div>
+                    <div style="margin-bottom:8px"><label>Code</label><input name="code" value="{{ r.code or '' }}"></div>
+                    <div style="margin-bottom:8px"><label>Zone</label><input name="zone" value="{{ r.zone or '' }}"></div>
+                    <div style="margin-bottom:10px"><label>Description</label><input name="description" value="{{ r.description or '' }}"></div>
+                    <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                  </form>
+                </div>
+              </details>
+              <form class="inline-form" method="post" action="{{ url_for('room_delete', room_id=r.id) }}" data-confirm="Delete room {{ r.name }}? Assets here reset to UNKNOWN location.">
+                <button class="btn btn-sm btn-danger" type="submit">✕</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="center muted" style="padding:24px">NO ROOMS DEFINED</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-title">Add Room</div>
+    <div class="panel">
+      <form method="post" action="{{ url_for('rooms_list') }}">
+        <div style="margin-bottom:12px"><label>Room Name *</label><input name="name" required placeholder="e.g. Armoury A"></div>
+        <div style="margin-bottom:12px"><label>Gateway / Zone Code</label><input name="code" placeholder="e.g. ARM-A — BLE gateway maps to this"></div>
+        <div style="margin-bottom:12px"><label>Zone / Building</label><input name="zone" placeholder="e.g. Block 1"></div>
+        <div style="margin-bottom:14px"><label>Description</label><input name="description"></div>
+        <button class="btn btn-primary btn-block" type="submit">▦ Add Room</button>
+      </form>
+    </div>
+    <a class="btn btn-block" href="{{ url_for('tracking_dashboard') }}" style="margin-top:12px">← Back to Device Tracking</a>
+  </div>
+</div>
+{% endblock %}

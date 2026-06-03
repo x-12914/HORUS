@@ -14,6 +14,7 @@ challenges, and turns the accumulated record into analytics that support
 - **Mission Dossier** — a full per-mission file with linked **casualties**, **operational challenges** and **reports** (AAR / SITREP / INTEL / DEBRIEF), each added inline.
 - **Casualty Register** — cross-mission roll-up of KIA / WIA / MIA / POW.
 - **Drone Feed** — assign multiple drones to each mission (callsign, model, status, live URL); a per-mission feed grid plus an aggregate **video wall** of every feed across all missions. Shows an OFFLINE placeholder until a live stream URL is connected.
+- **Device Tracking** — BLE asset tracking. A facility **Rooms** register and an **Asset** register (each asset carries its own BLE tag); a dashboard shows assets-by-room, what has left the facility, and what has no position yet. Locations stay UNKNOWN until the BLE hardware is connected and POSTs fixes to the ingestion endpoint (see below).
 - **Report Archive** — every filed report in one searchable place.
 - **Strategic Analytics** — missions by branch/outcome/status, casualties by type/branch, challenges by category, and a year-over-year historical trend line.
 
@@ -118,6 +119,32 @@ sudo systemctl restart horus
 # run ./venv/bin/python manage.py init-db again if the schema changed (idempotent)
 ```
 
+## BLE tracking ingestion endpoint
+
+When the tracking hardware is installed, point your BLE gateway at HORUS to
+update asset locations in real time. The endpoint is **disabled until** you set
+a shared token:
+
+```
+HORUS_INGEST_TOKEN=<long-random-token>      # add to the systemd unit, then restart
+```
+
+The gateway then POSTs one fix per detected tag:
+
+```bash
+curl -X POST https://horus.157.250.205.174.nip.io/api/track \
+  -H "X-HORUS-TOKEN: <the-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"device_id":"DEV-0001","room":"ARM-A","presence":"IN FACILITY"}'
+```
+
+- `device_id` — the BLE tag id (must match an asset's *BLE Device / Tag ID*).
+- `room` — a room's **code** or **name** (omit / send `presence:"LEFT FACILITY"` when the tag is no longer seen by any gateway).
+- The asset's room, presence, `last_seen` and tracking status (→ `LIVE`) update automatically.
+
+This route is login-exempt (a gateway can't sign in) and protected solely by
+the token, so keep the token secret and only POST over HTTPS.
+
 ## Project layout
 
 ```
@@ -141,5 +168,6 @@ deploy/         systemd unit + optional Nginx server block
 | `HORUS_SECRET_KEY` | Flask session signing key — **set in production** | insecure dev key |
 | `HORUS_DB` | Absolute path to the SQLite file | `./horus.db` |
 | `HORUS_HTTPS` | `1` marks session cookies Secure (use with TLS) | `0` |
+| `HORUS_INGEST_TOKEN` | Shared token enabling the BLE `/api/track` endpoint | unset (endpoint disabled) |
 | `HORUS_HOST` / `HORUS_PORT` | Dev server bind (ignored under Gunicorn) | `127.0.0.1` / `5000` |
 | `HORUS_DEBUG` | `1` enables the dev reloader/debugger | `1` (dev only) |

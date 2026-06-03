@@ -34,3 +34,13 @@
   {%- set m = {'ONLINE':'b-green','STANDBY':'b-amber','LOST':'b-red','OFFLINE':'b-grey'} -%}
   <span class="badge {{ m.get(s,'b-grey') }}">{{ s }}</span>
 {% endmacro %}
+
+{% macro presence_badge(p) %}
+  {%- set m = {'IN FACILITY':'b-green','LEFT FACILITY':'b-red','UNKNOWN':'b-grey'} -%}
+  <span class="badge {{ m.get(p,'b-grey') }}">{{ p }}</span>
+{% endmacro %}
+
+{% macro tracking_badge(t) %}
+  {%- set m = {'LIVE':'b-green','AWAITING HARDWARE':'b-amber','LOST':'b-red','DISABLED':'b-grey'} -%}
+  <span class="badge {{ m.get(t,'b-grey') }}">{{ t }}</span>
+{% endmacro %}

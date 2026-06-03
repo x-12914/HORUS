@@ -43,8 +43,9 @@ db.init_app(app)
 # ---------------------------------------------------------------------------
 # Authentication
 # ---------------------------------------------------------------------------
-# Endpoints reachable without a session.
-PUBLIC_ENDPOINTS = {"login", "static"}
+# Endpoints reachable without a session. track_ingest is a machine endpoint
+# (the BLE gateway) and is guarded by its own shared token instead of a login.
+PUBLIC_ENDPOINTS = {"login", "static", "track_ingest"}
 
 
 @app.before_request
@@ -106,12 +107,20 @@ CHALLENGE_CATEGORIES = [
 SEVERITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
 REPORT_TYPES = ["AAR", "SITREP", "INTEL", "DEBRIEF"]
 FEED_STATUSES = ["ONLINE", "OFFLINE", "STANDBY", "LOST"]
+ASSET_CATEGORIES = [
+    "Weapon", "Ammunition", "Comms", "Medical", "Optics",
+    "Power", "Vehicle Part", "General",
+]
+TRACKING_STATUSES = ["AWAITING HARDWARE", "LIVE", "LOST", "DISABLED"]
+PRESENCE_STATES = ["UNKNOWN", "IN FACILITY", "LEFT FACILITY"]
 
 VOCAB = dict(
     branches=BRANCHES, classifications=CLASSIFICATIONS, statuses=STATUSES,
     outcomes=OUTCOMES, casualty_types=CASUALTY_TYPES,
     challenge_categories=CHALLENGE_CATEGORIES, severities=SEVERITIES,
     report_types=REPORT_TYPES, feed_statuses=FEED_STATUSES,
+    asset_categories=ASSET_CATEGORIES, tracking_statuses=TRACKING_STATUSES,
+    presence_states=PRESENCE_STATES,
 )
 
 
@@ -453,6 +462,221 @@ def feeds_wall():
         one=True,
     )
     return render_template("feeds.html", feeds=feeds, counts=counts, f_status=status)
+
+
+# ===========================================================================
+# Device tracking — BLE asset location within the facility
+# ===========================================================================
+def _rooms():
+    return db.query("SELECT * FROM rooms ORDER BY name")
+
+
+@app.route("/tracking")
+def tracking_dashboard():
+    counts = db.query(
+        """SELECT
+             COUNT(*) AS total,
+             SUM(CASE WHEN presence='IN FACILITY'   THEN 1 ELSE 0 END) AS in_facility,
+             SUM(CASE WHEN presence='LEFT FACILITY' THEN 1 ELSE 0 END) AS left_facility,
+             SUM(CASE WHEN last_seen IS NULL        THEN 1 ELSE 0 END) AS untracked
+           FROM assets""",
+        one=True,
+    )
+    # Has any asset ever reported a position? Drives the "awaiting hardware" banner.
+    live = db.query(
+        "SELECT COUNT(*) AS c FROM assets WHERE last_seen IS NOT NULL", one=True
+    )["c"]
+
+    rooms = _rooms()
+    assets = db.query(
+        """SELECT a.*, r.name AS room_name
+           FROM assets a LEFT JOIN rooms r ON r.id = a.current_room_id
+           ORDER BY a.asset_tag"""
+    )
+    # Bucket assets by room id; None bucket holds unlocated assets.
+    by_room = {}
+    for a in assets:
+        by_room.setdefault(a["current_room_id"], []).append(a)
+    unlocated = [a for a in assets if a["presence"] != "LEFT FACILITY"
+                 and a["current_room_id"] is None]
+    departed = [a for a in assets if a["presence"] == "LEFT FACILITY"]
+
+    return render_template(
+        "tracking.html", counts=counts, live=live, rooms=rooms,
+        by_room=by_room, unlocated=unlocated, departed=departed,
+    )
+
+
+@app.route("/tracking/assets")
+def assets_list():
+    room = request.args.get("room", "")
+    category = request.args.get("category", "")
+    presence = request.args.get("presence", "")
+    search = request.args.get("q", "").strip()
+
+    sql = (
+        "SELECT a.*, r.name AS room_name FROM assets a "
+        "LEFT JOIN rooms r ON r.id = a.current_room_id WHERE 1=1"
+    )
+    params = []
+    if room:
+        sql += " AND a.current_room_id = ?"
+        params.append(room)
+    if category:
+        sql += " AND a.category = ?"
+        params.append(category)
+    if presence:
+        sql += " AND a.presence = ?"
+        params.append(presence)
+    if search:
+        sql += " AND (a.asset_tag LIKE ? OR a.name LIKE ? OR a.device_id LIKE ?)"
+        like = f"%{search}%"
+        params += [like, like, like]
+    sql += " ORDER BY a.asset_tag"
+
+    assets = db.query(sql, params)
+    return render_template(
+        "assets.html", assets=assets, rooms=_rooms(),
+        f_room=room, f_category=category, f_presence=presence, f_search=search,
+    )
+
+
+@app.route("/tracking/assets/new", methods=["GET", "POST"])
+def asset_new():
+    if request.method == "POST":
+        try:
+            aid = db.execute(
+                """INSERT INTO assets
+                   (asset_tag, name, category, serial, device_id, tracking_status, notes)
+                   VALUES (?,?,?,?,?,?,?)""",
+                (
+                    _form("asset_tag"), _form("name"), _form("category", "General"),
+                    _form("serial"), _form("device_id") or None,
+                    _form("tracking_status", "AWAITING HARDWARE"), _form("notes"),
+                ),
+            )
+        except db.sqlite3.IntegrityError:
+            flash("Asset tag already exists — tags must be unique.", "warning")
+            return render_template("asset_form.html", asset=None, rooms=_rooms(), action="new")
+        flash(f"Asset {_form('asset_tag')} registered.", "success")
+        return redirect(url_for("assets_list"))
+    return render_template("asset_form.html", asset=None, rooms=_rooms(), action="new")
+
+
+@app.route("/tracking/assets/<int:asset_id>/edit", methods=["GET", "POST"])
+def asset_edit(asset_id):
+    asset = db.query("SELECT * FROM assets WHERE id=?", (asset_id,), one=True)
+    if not asset:
+        abort(404)
+    if request.method == "POST":
+        room_id = _form("current_room_id") or None
+        presence = _form("presence", "UNKNOWN")
+        # Stamp last_seen when a manual location is set (normally hardware-driven).
+        located = bool(room_id) or presence != "UNKNOWN"
+        last_seen_sql = "datetime('now')" if located else "NULL"
+        try:
+            db.execute(
+                f"""UPDATE assets SET
+                    asset_tag=?, name=?, category=?, serial=?, device_id=?,
+                    tracking_status=?, current_room_id=?, presence=?,
+                    last_seen={last_seen_sql}, notes=? WHERE id=?""",
+                (
+                    _form("asset_tag"), _form("name"), _form("category", "General"),
+                    _form("serial"), _form("device_id") or None,
+                    _form("tracking_status", "AWAITING HARDWARE"),
+                    room_id, presence, _form("notes"), asset_id,
+                ),
+            )
+        except db.sqlite3.IntegrityError:
+            flash("Asset tag already exists — tags must be unique.", "warning")
+            return render_template("asset_form.html", asset=asset, rooms=_rooms(), action="edit")
+        flash("Asset updated.", "success")
+        return redirect(url_for("assets_list"))
+    return render_template("asset_form.html", asset=asset, rooms=_rooms(), action="edit")
+
+
+@app.route("/tracking/assets/<int:asset_id>/delete", methods=["POST"])
+def asset_delete(asset_id):
+    db.execute("DELETE FROM assets WHERE id=?", (asset_id,))
+    flash("Asset removed from register.", "warning")
+    return redirect(url_for("assets_list"))
+
+
+@app.route("/tracking/rooms", methods=["GET", "POST"])
+def rooms_list():
+    if request.method == "POST":
+        db.execute(
+            "INSERT INTO rooms (name, code, zone, description) VALUES (?,?,?,?)",
+            (_form("name"), _form("code") or None, _form("zone"), _form("description")),
+        )
+        flash("Room added.", "success")
+        return redirect(url_for("rooms_list"))
+    rooms = db.query(
+        """SELECT r.*, (SELECT COUNT(*) FROM assets a WHERE a.current_room_id=r.id) AS asset_count
+           FROM rooms r ORDER BY r.name"""
+    )
+    return render_template("rooms.html", rooms=rooms)
+
+
+@app.route("/tracking/rooms/<int:room_id>/edit", methods=["POST"])
+def room_edit(room_id):
+    db.execute(
+        "UPDATE rooms SET name=?, code=?, zone=?, description=? WHERE id=?",
+        (_form("name"), _form("code") or None, _form("zone"), _form("description"), room_id),
+    )
+    flash("Room updated.", "success")
+    return redirect(url_for("rooms_list"))
+
+
+@app.route("/tracking/rooms/<int:room_id>/delete", methods=["POST"])
+def room_delete(room_id):
+    # ON DELETE SET NULL clears current_room_id on any assets that were here.
+    db.execute("DELETE FROM rooms WHERE id=?", (room_id,))
+    flash("Room removed; affected assets reset to UNKNOWN location.", "warning")
+    return redirect(url_for("rooms_list"))
+
+
+# --- BLE gateway ingestion endpoint ---------------------------------------
+# The future BLE hardware/gateway POSTs here to update an asset's location.
+# Login-exempt (a gateway can't sign in) but guarded by a shared token set in
+# the HORUS_INGEST_TOKEN environment variable. Disabled until that is set.
+@app.route("/api/track", methods=["POST"])
+def track_ingest():
+    token = os.environ.get("HORUS_INGEST_TOKEN")
+    if not token:
+        return {"error": "ingestion disabled — set HORUS_INGEST_TOKEN"}, 503
+    if request.headers.get("X-HORUS-TOKEN") != token:
+        return {"error": "unauthorized"}, 401
+
+    data = request.get_json(silent=True) or request.form
+    device_id = (data.get("device_id") or "").strip()
+    if not device_id:
+        return {"error": "device_id required"}, 400
+
+    asset = db.query("SELECT * FROM assets WHERE device_id=?", (device_id,), one=True)
+    if not asset:
+        return {"error": "unknown device_id"}, 404
+
+    room_ref = (data.get("room") or "").strip()
+    presence = (data.get("presence") or "").strip().upper()
+    room_id = None
+    if room_ref:
+        room = db.query(
+            "SELECT id FROM rooms WHERE code=? OR name=?", (room_ref, room_ref), one=True
+        )
+        room_id = room["id"] if room else None
+    if presence not in PRESENCE_STATES:
+        presence = "IN FACILITY" if room_id else "LEFT FACILITY"
+
+    db.execute(
+        "UPDATE assets SET current_room_id=?, presence=?, tracking_status='LIVE', "
+        "last_seen=datetime('now') WHERE id=?",
+        (room_id, presence, asset["id"]),
+    )
+    return {
+        "ok": True, "asset_tag": asset["asset_tag"],
+        "room_id": room_id, "presence": presence,
+    }
 
 
 # ===========================================================================

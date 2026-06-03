@@ -97,6 +97,31 @@ DRONES = [
     (7, "SKYLIFT-1", "Cargo UAS", None, "OFFLINE", "Airlift escort"),
 ]
 
+# Facility rooms (name, code, zone, description)
+ROOMS = [
+    ("Armoury A", "ARM-A", "Block 1", "Primary weapons store"),
+    ("Comms Room", "COMMS", "Block 1", "Radio & signals equipment"),
+    ("Medical Bay", "MED", "Block 2", "Medical stores"),
+    ("Store 4", "ST-4", "Block 2", "General quartermaster store"),
+    ("Loading Bay", "DOCK", "Block 3", "Vehicle access / dispatch"),
+]
+
+# Trackable assets (asset_tag, name, category, serial, device_id).
+# All seed assets are AWAITING HARDWARE with UNKNOWN location — positions
+# populate once the BLE trackers are installed.
+ASSETS = [
+    ("AST-0001", "Assault Rifle A4", "Weapon", "SN-A4-1001", "DEV-0001"),
+    ("AST-0002", "Assault Rifle A4", "Weapon", "SN-A4-1002", "DEV-0002"),
+    ("AST-0003", "Marksman Rifle", "Weapon", "SN-MR-2007", "DEV-0003"),
+    ("AST-0004", "Field Radio R9", "Comms", "SN-R9-5521", "DEV-0004"),
+    ("AST-0005", "Field Radio R9", "Comms", "SN-R9-5522", None),
+    ("AST-0006", "Night Optics NV2", "Optics", "SN-NV-3310", "DEV-0006"),
+    ("AST-0007", "Trauma Kit", "Medical", "SN-TK-7781", None),
+    ("AST-0008", "Ammo Crate 5.56", "Ammunition", "SN-AC-9001", "DEV-0008"),
+    ("AST-0009", "Generator Unit", "Power", "SN-GN-4402", "DEV-0009"),
+    ("AST-0010", "Spare Wheel Set", "Vehicle Part", "SN-VW-6650", None),
+]
+
 # (mission_index, title, type, author, content)
 REPORTS = [
     (0, "After-Action Review — IRON SENTINEL", "AAR", "Col. A. Marwan",
@@ -145,6 +170,15 @@ def seed_if_empty(DB_PATH):
         cur.execute(
             """INSERT INTO drone_feeds (mission_id, callsign, model, feed_url, status, notes)
                VALUES (?,?,?,?,?,?)""", (mission_ids[idx], *rest))
+
+    for room in ROOMS:
+        cur.execute(
+            "INSERT INTO rooms (name, code, zone, description) VALUES (?,?,?,?)", room)
+
+    for asset in ASSETS:
+        cur.execute(
+            """INSERT INTO assets (asset_tag, name, category, serial, device_id)
+               VALUES (?,?,?,?,?)""", asset)
 
     for idx, *rest in REPORTS:
         cur.execute(

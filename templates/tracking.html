@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "macros.html" import presence_badge, tracking_badge %}
+{% block title %}Device Tracking{% endblock %}
+{% block crumb %}Device Tracking — Facility{% endblock %}
+
+{% block content %}
+{% if live == 0 %}
+<div class="flash flash-warning" style="margin-bottom:18px">
+  ▸ BLE tracking hardware not yet connected — live locations are unavailable. Assets and rooms can be
+  registered now; positions will populate automatically once the hardware is hooked up and starts reporting to
+  <code>/api/track</code>.
+</div>
+{% endif %}
+
+<div class="grid grid-stats" style="margin-bottom:18px">
+  <div class="stat"><div class="stat-label">Tracked Assets</div><div class="stat-value">{{ counts.total or 0 }}</div></div>
+  <div class="stat"><div class="stat-label">In Facility</div><div class="stat-value green">{{ counts.in_facility or 0 }}</div></div>
+  <div class="stat red"><div class="stat-label">Left Facility</div><div class="stat-value red">{{ counts.left_facility or 0 }}</div></div>
+  <div class="stat amber"><div class="stat-label">No Position Yet</div><div class="stat-value amber">{{ counts.untracked or 0 }}</div></div>
+</div>
+
+<div class="btn-row" style="margin-bottom:20px">
+  <a class="btn btn-primary" href="{{ url_for('asset_new') }}">+ Register Asset</a>
+  <a class="btn" href="{{ url_for('assets_list') }}">▤ Asset Register</a>
+  <a class="btn" href="{{ url_for('rooms_list') }}">▦ Manage Rooms</a>
+</div>
+
+<div class="section-title">Assets by Room</div>
+{% if rooms %}
+<div class="room-grid">
+  {% for r in rooms %}
+  <div class="room-card">
+    <div class="room-head">
+      <div><b>{{ r.name }}</b> {% if r.code %}<span class="muted" style="font-size:11px">[{{ r.code }}]</span>{% endif %}</div>
+      <span class="badge b-grey">{{ by_room.get(r.id, [])|length }}</span>
+    </div>
+    {% if r.zone %}<div class="muted" style="font-size:11px; letter-spacing:1px">{{ r.zone }}</div>{% endif %}
+    <div class="room-assets">
+      {% for a in by_room.get(r.id, []) %}
+      <a class="room-asset" href="{{ url_for('asset_edit', asset_id=a.id) }}">
+        <span class="dot dot-green"></span>{{ a.asset_tag }} <span class="muted">{{ a.name }}</span>
+      </a>
+      {% else %}
+      <div class="muted" style="font-size:11px; padding:6px 0">— empty —</div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">NO ROOMS DEFINED — <a href="{{ url_for('rooms_list') }}" style="color:var(--green)">add facility rooms</a> first.</div>
+{% endif %}
+
+<div class="cols-2" style="margin-top:20px">
+  <div>
+    <div class="section-title">Unlocated / Awaiting Position</div>
+    <div class="panel">
+      {% for a in unlocated %}
+      <a class="room-asset" href="{{ url_for('asset_edit', asset_id=a.id) }}" style="display:flex; justify-content:space-between">
+        <span><span class="dot dot-grey"></span>{{ a.asset_tag }} <span class="muted">{{ a.name }}</span></span>
+        {{ tracking_badge(a.tracking_status) }}
+      </a>
+      {% else %}
+      <div class="muted center" style="padding:10px">All assets have a known position.</div>
+      {% endfor %}
+    </div>
+  </div>
+  <div>
+    <div class="section-title">Departed Facility</div>
+    <div class="panel">
+      {% for a in departed %}
+      <a class="room-asset" href="{{ url_for('asset_edit', asset_id=a.id) }}" style="display:flex; justify-content:space-between">
+        <span><span class="dot dot-red"></span>{{ a.asset_tag }} <span class="muted">{{ a.name }}</span></span>
+        <span class="muted" style="font-size:11px">{{ a.last_seen or '' }}</span>
+      </a>
+      {% else %}
+      <div class="muted center" style="padding:10px">No assets have left the facility.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
