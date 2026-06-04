@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Phones{% endblock %}
+{% block crumb %}Alert Phones{% endblock %}
+
+{% block content %}
+<div class="cols-2">
+  <div>
+    <div class="section-title">Enrolled Phones</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Label</th><th>Platform</th><th>Device Token</th><th>Status</th><th>Last Seen</th><th></th></tr></thead>
+        <tbody>
+          {% for p in phones %}
+          <tr>
+            <td><b>{{ p.label }}</b><div class="muted" style="font-size:11px">{{ p.alerts_received }} alert(s) received</div></td>
+            <td>{{ p.platform or '—' }}</td>
+            <td class="muted" style="font-size:11px">
+              <code>{{ p.device_token[:10] }}…</code>
+            </td>
+            <td>{% if p.active %}<span class="badge b-green">ACTIVE</span>{% else %}<span class="badge b-grey">DISABLED</span>{% endif %}</td>
+            <td class="muted" style="font-size:11px">{{ p.last_seen or 'never' }}</td>
+            <td style="white-space:nowrap">
+              <form class="inline-form" method="post" action="{{ url_for('phone_toggle', phone_id=p.id) }}">
+                <button class="btn btn-sm" type="submit">{{ 'Disable' if p.active else 'Enable' }}</button>
+              </form>
+              <form class="inline-form" method="post" action="{{ url_for('phone_delete', phone_id=p.id) }}" data-confirm="Remove phone {{ p.label }}?">
+                <button class="btn btn-sm btn-danger" type="submit">✕</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="center muted" style="padding:24px">NO PHONES ENROLLED</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="muted" style="margin-top:12px; font-size:11px; letter-spacing:.5px">
+      ▸ The full device token is the phone app's secret for polling alerts — it's only shown in full at enrolment via the API.
+      Phones can also self-enrol through <code>/api/alerts/register</code>.
+    </p>
+  </div>
+
+  <div>
+    <div class="section-title">Enrol Phone</div>
+    <div class="panel">
+      <form method="post" action="{{ url_for('phones_list') }}">
+        <div style="margin-bottom:12px"><label>Label / Callsign *</label><input name="label" required placeholder="e.g. Alpha-1"></div>
+        <div style="margin-bottom:14px">
+          <label>Platform</label>
+          <select name="platform">
+            <option value="">—</option>
+            <option>android</option>
+            <option>ios</option>
+            <option>other</option>
+          </select>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">+ Enrol Phone</button>
+      </form>
+      <p class="muted" style="font-size:11px; margin-top:12px; letter-spacing:.5px">
+        A unique device token is generated automatically. View it via the API response, or re-enrol the app with it.
+      </p>
+    </div>
+    <a class="btn btn-block" href="{{ url_for('alerts_console') }}" style="margin-top:12px">← Back to Dispatch Console</a>
+  </div>
+</div>
+{% endblock %}

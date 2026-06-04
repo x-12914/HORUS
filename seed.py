@@ -122,6 +122,15 @@ ASSETS = [
     ("AST-0010", "Spare Wheel Set", "Vehicle Part", "SN-VW-6650", None),
 ]
 
+# Demo phones for the Air Alert console (label, device_token, platform).
+# Tokens are fixed demo values — real phones get random tokens on enrolment.
+PHONES = [
+    ("Alpha-1", "demo-token-alpha1-0001", "android"),
+    ("Bravo-2", "demo-token-bravo2-0002", "android"),
+    ("Command Post", "demo-token-cmdpost-0003", "ios"),
+    ("Medic-1", "demo-token-medic1-0004", "android"),
+]
+
 # (mission_index, title, type, author, content)
 REPORTS = [
     (0, "After-Action Review — IRON SENTINEL", "AAR", "Col. A. Marwan",
@@ -179,6 +188,10 @@ def seed_if_empty(DB_PATH):
         cur.execute(
             """INSERT INTO assets (asset_tag, name, category, serial, device_id)
                VALUES (?,?,?,?,?)""", asset)
+
+    for phone in PHONES:
+        cur.execute(
+            "INSERT INTO phones (label, device_token, platform) VALUES (?,?,?)", phone)
 
     for idx, *rest in REPORTS:
         cur.execute(

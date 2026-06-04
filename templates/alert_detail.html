@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "macros.html" import alert_badge, delivery_badge %}
+{% block title %}Alert #{{ '%04d' % alert.id }}{% endblock %}
+{% block crumb %}Alert Detail{% endblock %}
+
+{% block content %}
+<div class="detail-head">
+  <div>
+    <div class="muted mono-id">ALERT #{{ '%04d' % alert.id }}</div>
+    <div class="detail-code" style="font-size:24px">{{ alert.title or 'Air Alert' }}</div>
+    <div class="tag-meta">
+      {{ alert_badge(alert.severity) }}
+      <span class="badge b-grey">TARGET: {{ alert.target }}</span>
+    </div>
+  </div>
+  <form class="inline-form" method="post" action="{{ url_for('alert_delete', alert_id=alert.id) }}" data-confirm="Delete this alert record?">
+    <button class="btn btn-danger" type="submit">✕ Delete</button>
+  </form>
+</div>
+
+<div class="panel" style="margin-bottom:18px">
+  <div class="section-title">Message</div>
+  <div style="white-space:pre-wrap; color:var(--txt)">{{ alert.message }}</div>
+  <div class="rec-meta" style="margin-top:12px">BY: {{ alert.created_by or '—' }} &nbsp;//&nbsp; {{ alert.created_at }}</div>
+</div>
+
+{% set acked = deliveries|selectattr('status','equalto','ACKNOWLEDGED')|list|length %}
+{% set delivered = deliveries|rejectattr('status','equalto','PENDING')|list|length %}
+<div class="grid grid-stats" style="margin-bottom:18px">
+  <div class="stat"><div class="stat-label">Targeted</div><div class="stat-value">{{ deliveries|length }}</div></div>
+  <div class="stat blue"><div class="stat-label">Delivered</div><div class="stat-value blue">{{ delivered }}</div></div>
+  <div class="stat"><div class="stat-label">Acknowledged</div><div class="stat-value green">{{ acked }}</div></div>
+</div>
+
+<div class="section-title">Per-Phone Status</div>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Phone</th><th>Platform</th><th>Status</th><th>Delivered</th><th>Acknowledged</th></tr></thead>
+    <tbody>
+      {% for d in deliveries %}
+      <tr>
+        <td><b>{{ d.label }}</b></td>
+        <td class="muted">{{ d.platform or '—' }}</td>
+        <td>{{ delivery_badge(d.status) }}</td>
+        <td class="muted">{{ d.delivered_at or '—' }}</td>
+        <td class="muted">{{ d.acknowledged_at or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="center muted">No recipients.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

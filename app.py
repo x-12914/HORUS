@@ -12,6 +12,7 @@ Then open http://127.0.0.1:5000
 """
 
 import os
+import secrets
 from datetime import datetime, timedelta
 
 from flask import (
@@ -43,9 +44,12 @@ db.init_app(app)
 # ---------------------------------------------------------------------------
 # Authentication
 # ---------------------------------------------------------------------------
-# Endpoints reachable without a session. track_ingest is a machine endpoint
-# (the BLE gateway) and is guarded by its own shared token instead of a login.
-PUBLIC_ENDPOINTS = {"login", "static", "track_ingest"}
+# Endpoints reachable without a session. These are machine endpoints (BLE
+# gateway, phone apps) guarded by their own tokens instead of a login.
+PUBLIC_ENDPOINTS = {
+    "login", "static", "track_ingest",
+    "api_alert_register", "api_alert_poll", "api_alert_ack",
+}
 
 
 @app.before_request
@@ -113,6 +117,7 @@ ASSET_CATEGORIES = [
 ]
 TRACKING_STATUSES = ["AWAITING HARDWARE", "LIVE", "LOST", "DISABLED"]
 PRESENCE_STATES = ["UNKNOWN", "IN FACILITY", "LEFT FACILITY"]
+ALERT_SEVERITIES = ["INFO", "WARNING", "AIR ALERT", "ALL CLEAR"]
 
 VOCAB = dict(
     branches=BRANCHES, classifications=CLASSIFICATIONS, statuses=STATUSES,
@@ -120,7 +125,7 @@ VOCAB = dict(
     challenge_categories=CHALLENGE_CATEGORIES, severities=SEVERITIES,
     report_types=REPORT_TYPES, feed_statuses=FEED_STATUSES,
     asset_categories=ASSET_CATEGORIES, tracking_statuses=TRACKING_STATUSES,
-    presence_states=PRESENCE_STATES,
+    presence_states=PRESENCE_STATES, alert_severities=ALERT_SEVERITIES,
 )
 
 
@@ -677,6 +682,204 @@ def track_ingest():
         "ok": True, "asset_tag": asset["asset_tag"],
         "room_id": room_id, "presence": presence,
     }
+
+
+# ===========================================================================
+# Air Alert — push messages from the dashboard to phones
+# ===========================================================================
+@app.route("/alerts")
+def alerts_console():
+    phones = db.query("SELECT * FROM phones ORDER BY label")
+    active = [p for p in phones if p["active"]]
+    recent = db.query(
+        """SELECT a.*,
+             (SELECT COUNT(*) FROM alert_deliveries d WHERE d.alert_id=a.id) AS total,
+             (SELECT COUNT(*) FROM alert_deliveries d WHERE d.alert_id=a.id AND d.status!='PENDING') AS delivered,
+             (SELECT COUNT(*) FROM alert_deliveries d WHERE d.alert_id=a.id AND d.status='ACKNOWLEDGED') AS acked
+           FROM alerts a ORDER BY datetime(a.created_at) DESC, a.id DESC LIMIT 25"""
+    )
+    return render_template(
+        "alerts.html", phones=phones, active=active, recent=recent,
+    )
+
+
+@app.route("/alerts/send", methods=["POST"])
+def alert_send():
+    message = _form("message")
+    if not message:
+        flash("Alert message is required.", "warning")
+        return redirect(url_for("alerts_console"))
+
+    severity = _form("severity", "AIR ALERT")
+    target = _form("target", "ALL")
+    title = _form("title")
+
+    if target == "SELECTED":
+        ids = [i for i in request.form.getlist("phone_ids") if i.isdigit()]
+        if not ids:
+            flash("Select at least one phone, or choose ALL.", "warning")
+            return redirect(url_for("alerts_console"))
+        placeholders = ",".join("?" * len(ids))
+        phones = db.query(
+            f"SELECT id FROM phones WHERE active=1 AND id IN ({placeholders})", ids
+        )
+    else:
+        phones = db.query("SELECT id FROM phones WHERE active=1")
+
+    if not phones:
+        flash("No active phones to alert.", "warning")
+        return redirect(url_for("alerts_console"))
+
+    alert_id = db.execute(
+        "INSERT INTO alerts (title, message, severity, target, created_by) VALUES (?,?,?,?,?)",
+        (title, message, severity, target, session.get("user")),
+    )
+    for p in phones:
+        db.execute(
+            "INSERT INTO alert_deliveries (alert_id, phone_id) VALUES (?,?)",
+            (alert_id, p["id"]),
+        )
+    flash(f"{severity} dispatched to {len(phones)} phone(s).", "success")
+    return redirect(url_for("alert_detail", alert_id=alert_id))
+
+
+@app.route("/alerts/<int:alert_id>")
+def alert_detail(alert_id):
+    alert = db.query("SELECT * FROM alerts WHERE id=?", (alert_id,), one=True)
+    if not alert:
+        abort(404)
+    deliveries = db.query(
+        """SELECT d.*, p.label, p.platform
+           FROM alert_deliveries d JOIN phones p ON p.id=d.phone_id
+           WHERE d.alert_id=? ORDER BY p.label""",
+        (alert_id,),
+    )
+    return render_template("alert_detail.html", alert=alert, deliveries=deliveries)
+
+
+@app.route("/alerts/<int:alert_id>/delete", methods=["POST"])
+def alert_delete(alert_id):
+    db.execute("DELETE FROM alerts WHERE id=?", (alert_id,))
+    flash("Alert record deleted.", "warning")
+    return redirect(url_for("alerts_console"))
+
+
+# --- Phones management (dashboard) ----------------------------------------
+@app.route("/alerts/phones", methods=["GET", "POST"])
+def phones_list():
+    if request.method == "POST":
+        db.execute(
+            "INSERT INTO phones (label, device_token, platform) VALUES (?,?,?)",
+            (_form("label", "Unnamed phone"), secrets.token_hex(16), _form("platform")),
+        )
+        flash("Phone enrolled. Share its device token with the app.", "success")
+        return redirect(url_for("phones_list"))
+    phones = db.query(
+        """SELECT p.*,
+             (SELECT COUNT(*) FROM alert_deliveries d WHERE d.phone_id=p.id) AS alerts_received
+           FROM phones p ORDER BY p.label"""
+    )
+    return render_template("phones.html", phones=phones)
+
+
+@app.route("/alerts/phones/<int:phone_id>/toggle", methods=["POST"])
+def phone_toggle(phone_id):
+    row = db.query("SELECT active FROM phones WHERE id=?", (phone_id,), one=True)
+    if not row:
+        abort(404)
+    db.execute("UPDATE phones SET active=? WHERE id=?", (0 if row["active"] else 1, phone_id))
+    flash("Phone status updated.", "success")
+    return redirect(url_for("phones_list"))
+
+
+@app.route("/alerts/phones/<int:phone_id>/delete", methods=["POST"])
+def phone_delete(phone_id):
+    db.execute("DELETE FROM phones WHERE id=?", (phone_id,))
+    flash("Phone removed.", "warning")
+    return redirect(url_for("phones_list"))
+
+
+# --- Phone-app API (login-exempt) -----------------------------------------
+# register: gated by the shared HORUS_ALERT_TOKEN enrolment token.
+# poll / ack: authenticated by the phone's own device_token.
+@app.route("/api/alerts/register", methods=["POST"])
+def api_alert_register():
+    token = os.environ.get("HORUS_ALERT_TOKEN")
+    if not token:
+        return {"error": "enrolment disabled — set HORUS_ALERT_TOKEN"}, 503
+    if request.headers.get("X-HORUS-ENROLL") != token:
+        return {"error": "unauthorized"}, 401
+
+    data = request.get_json(silent=True) or request.form
+    device_token = (data.get("device_token") or "").strip() or secrets.token_hex(16)
+    label = (data.get("label") or "Unnamed phone").strip()
+    platform = (data.get("platform") or "").strip()
+
+    existing = db.query("SELECT id FROM phones WHERE device_token=?", (device_token,), one=True)
+    if existing:
+        db.execute(
+            "UPDATE phones SET label=?, platform=?, active=1 WHERE id=?",
+            (label, platform, existing["id"]),
+        )
+    else:
+        db.execute(
+            "INSERT INTO phones (label, device_token, platform) VALUES (?,?,?)",
+            (label, device_token, platform),
+        )
+    return {"ok": True, "device_token": device_token}
+
+
+def _phone_from_token():
+    data = request.get_json(silent=True) or request.values
+    token = (data.get("device_token") or request.headers.get("X-HORUS-DEVICE") or "").strip()
+    if not token:
+        return None
+    return db.query(
+        "SELECT * FROM phones WHERE device_token=? AND active=1", (token,), one=True
+    )
+
+
+@app.route("/api/alerts/poll", methods=["GET", "POST"])
+def api_alert_poll():
+    phone = _phone_from_token()
+    if not phone:
+        return {"error": "unknown or inactive device"}, 401
+    db.execute("UPDATE phones SET last_seen=datetime('now') WHERE id=?", (phone["id"],))
+    pending = db.query(
+        """SELECT d.id AS did, a.id AS alert_id, a.title, a.message, a.severity, a.created_at
+           FROM alert_deliveries d JOIN alerts a ON a.id=d.alert_id
+           WHERE d.phone_id=? AND d.status='PENDING' ORDER BY a.id""",
+        (phone["id"],),
+    )
+    for r in pending:
+        db.execute(
+            "UPDATE alert_deliveries SET status='DELIVERED', delivered_at=datetime('now') WHERE id=?",
+            (r["did"],),
+        )
+    return {
+        "alerts": [
+            {
+                "id": r["alert_id"], "title": r["title"], "message": r["message"],
+                "severity": r["severity"], "sent": r["created_at"],
+            }
+            for r in pending
+        ]
+    }
+
+
+@app.route("/api/alerts/ack", methods=["POST"])
+def api_alert_ack():
+    phone = _phone_from_token()
+    if not phone:
+        return {"error": "unknown or inactive device"}, 401
+    data = request.get_json(silent=True) or request.form
+    alert_id = data.get("alert_id")
+    db.execute(
+        "UPDATE alert_deliveries SET status='ACKNOWLEDGED', acknowledged_at=datetime('now') "
+        "WHERE alert_id=? AND phone_id=?",
+        (alert_id, phone["id"]),
+    )
+    return {"ok": True}
 
 
 # ===========================================================================

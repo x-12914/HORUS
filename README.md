@@ -15,6 +15,7 @@ challenges, and turns the accumulated record into analytics that support
 - **Casualty Register** — cross-mission roll-up of KIA / WIA / MIA / POW.
 - **Drone Feed** — assign multiple drones to each mission (callsign, model, status, live URL); a per-mission feed grid plus an aggregate **video wall** of every feed across all missions. Shows an OFFLINE placeholder until a live stream URL is connected.
 - **Device Tracking** — BLE asset tracking. A facility **Rooms** register and an **Asset** register (each asset carries its own BLE tag); a dashboard shows assets-by-room, what has left the facility, and what has no position yet. Locations stay UNKNOWN until the BLE hardware is connected and POSTs fixes to the ingestion endpoint (see below).
+- **Air Alert** — dispatch a message from the dashboard to a single phone or **all phones at once**, choosing a severity (INFO / WARNING / AIR ALERT / ALL CLEAR). Tracks per-phone **delivery and acknowledgement**. Phone apps register, poll and acknowledge via a token-guarded API (see below).
 - **Report Archive** — every filed report in one searchable place.
 - **Strategic Analytics** — missions by branch/outcome/status, casualties by type/branch, challenges by category, and a year-over-year historical trend line.
 
@@ -145,6 +146,45 @@ curl -X POST https://horus.157.250.205.174.nip.io/api/track \
 This route is login-exempt (a gateway can't sign in) and protected solely by
 the token, so keep the token secret and only POST over HTTPS.
 
+## Air Alert phone-app API
+
+The dashboard (**Air Alert**) composes and dispatches alerts; the phone apps
+talk to HORUS over three endpoints. Delivery is **poll-based** (the app fetches
+pending alerts on an interval) — simple and self-contained; a real-time push
+(FCM/APNs or WebSocket) can be layered on later without changing this model.
+
+**1. Enrol** (one-time per phone) — gated by a shared enrolment token:
+
+```
+HORUS_ALERT_TOKEN=<long-random-token>      # add to the systemd unit, then restart
+```
+```bash
+curl -X POST https://horus.157.250.205.174.nip.io/api/alerts/register \
+  -H "X-HORUS-ENROLL: <enrolment-token>" -H "Content-Type: application/json" \
+  -d '{"label":"Alpha-1","platform":"android"}'
+# → {"ok":true,"device_token":"<the phone's own secret>"}
+```
+The app stores the returned `device_token` and uses it for everything below.
+(You can also enrol phones manually from **Air Alert → Manage Phones**.)
+
+**2. Poll** for pending alerts (every few seconds) — marks them delivered:
+
+```bash
+curl -X POST https://horus.157.250.205.174.nip.io/api/alerts/poll \
+  -H "Content-Type: application/json" -d '{"device_token":"<token>"}'
+# → {"alerts":[{"id":12,"title":"…","message":"…","severity":"AIR ALERT","sent":"…"}]}
+```
+
+**3. Acknowledge** an alert (when the user taps it):
+
+```bash
+curl -X POST https://horus.157.250.205.174.nip.io/api/alerts/ack \
+  -H "Content-Type: application/json" -d '{"device_token":"<token>","alert_id":12}'
+```
+
+Enrolment is disabled until `HORUS_ALERT_TOKEN` is set; poll/ack authenticate by
+the phone's own `device_token` (so manually-enrolled phones work without it).
+
 ## Project layout
 
 ```
@@ -169,5 +209,6 @@ deploy/         systemd unit + optional Nginx server block
 | `HORUS_DB` | Absolute path to the SQLite file | `./horus.db` |
 | `HORUS_HTTPS` | `1` marks session cookies Secure (use with TLS) | `0` |
 | `HORUS_INGEST_TOKEN` | Shared token enabling the BLE `/api/track` endpoint | unset (endpoint disabled) |
+| `HORUS_ALERT_TOKEN` | Shared enrolment token for the Air Alert phone API | unset (self-enrol disabled) |
 | `HORUS_HOST` / `HORUS_PORT` | Dev server bind (ignored under Gunicorn) | `127.0.0.1` / `5000` |
 | `HORUS_DEBUG` | `1` enables the dev reloader/debugger | `1` (dev only) |

@@ -109,9 +109,43 @@ CREATE TABLE IF NOT EXISTS reports (
     created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Phones running the HORUS alert app that can receive air alerts.
+CREATE TABLE IF NOT EXISTS phones (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    label           TEXT    NOT NULL,            -- owner / callsign, e.g. Alpha-1
+    device_token    TEXT    NOT NULL UNIQUE,     -- per-app secret used to poll/ack
+    platform        TEXT,                        -- android / ios / other
+    active          INTEGER NOT NULL DEFAULT 1,  -- 1 enrolled, 0 disabled
+    last_seen       TEXT,                        -- last poll time
+    created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Air alerts triggered from the dashboard.
+CREATE TABLE IF NOT EXISTS alerts (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    title           TEXT,
+    message         TEXT    NOT NULL,
+    severity        TEXT    NOT NULL DEFAULT 'AIR ALERT', -- INFO/WARNING/AIR ALERT/ALL CLEAR
+    target          TEXT    NOT NULL DEFAULT 'ALL',       -- ALL / SELECTED
+    created_by      TEXT,
+    created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Per-phone delivery + acknowledgement tracking for each alert.
+CREATE TABLE IF NOT EXISTS alert_deliveries (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    alert_id        INTEGER NOT NULL REFERENCES alerts(id) ON DELETE CASCADE,
+    phone_id        INTEGER NOT NULL REFERENCES phones(id) ON DELETE CASCADE,
+    status          TEXT    NOT NULL DEFAULT 'PENDING', -- PENDING/DELIVERED/ACKNOWLEDGED
+    delivered_at    TEXT,
+    acknowledged_at TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_casualties_mission  ON casualties(mission_id);
 CREATE INDEX IF NOT EXISTS idx_challenges_mission  ON challenges(mission_id);
 CREATE INDEX IF NOT EXISTS idx_reports_mission     ON reports(mission_id);
 CREATE INDEX IF NOT EXISTS idx_drone_feeds_mission ON drone_feeds(mission_id);
 CREATE INDEX IF NOT EXISTS idx_assets_room          ON assets(current_room_id);
 CREATE INDEX IF NOT EXISTS idx_assets_device        ON assets(device_id);
+CREATE INDEX IF NOT EXISTS idx_deliveries_alert     ON alert_deliveries(alert_id);
+CREATE INDEX IF NOT EXISTS idx_deliveries_phone     ON alert_deliveries(phone_id);

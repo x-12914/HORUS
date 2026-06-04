@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "macros.html" import alert_badge %}
+{% block title %}Air Alert{% endblock %}
+{% block crumb %}Air Alert — Dispatch Console{% endblock %}
+
+{% block content %}
+<div class="cols-2">
+  <!-- Compose -->
+  <div>
+    <div class="section-title">Compose Alert</div>
+    <div class="panel alert-compose">
+      {% if active|length == 0 %}
+      <div class="flash flash-warning" style="margin-bottom:14px">
+        ▸ No active phones enrolled yet. <a href="{{ url_for('phones_list') }}" style="color:var(--green)">Enrol a phone</a> first.
+      </div>
+      {% endif %}
+      <form method="post" action="{{ url_for('alert_send') }}" data-confirm="Dispatch this alert to the selected phones now?">
+        <div style="margin-bottom:14px">
+          <label>Title (optional)</label>
+          <input name="title" placeholder="e.g. Incoming — take cover">
+        </div>
+        <div style="margin-bottom:14px">
+          <label>Message *</label>
+          <textarea name="message" required placeholder="Message broadcast to the phones..."></textarea>
+        </div>
+        <div class="form-grid" style="margin-bottom:14px">
+          <div>
+            <label>Severity</label>
+            <select name="severity">
+              {% for s in vocab.alert_severities %}<option {{ 'selected' if s=='AIR ALERT' }}>{{ s }}</option>{% endfor %}
+            </select>
+          </div>
+          <div>
+            <label>Target</label>
+            <select name="target" id="target-select">
+              <option value="ALL">ALL PHONES ({{ active|length }})</option>
+              <option value="SELECTED">SELECTED PHONES…</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="phone-picker" style="display:none; margin-bottom:14px">
+          <label>Select phones</label>
+          <div class="phone-list">
+            {% for p in active %}
+            <label class="phone-check">
+              <input type="checkbox" name="phone_ids" value="{{ p.id }}"> {{ p.label }}
+              <span class="muted">{{ p.platform or '' }}</span>
+            </label>
+            {% else %}
+            <div class="muted" style="font-size:12px">No active phones.</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block alert-trigger" type="submit" {{ 'disabled' if active|length==0 }}>
+          ▲ TRIGGER ALERT
+        </button>
+      </form>
+    </div>
+    <a class="btn btn-block" href="{{ url_for('phones_list') }}" style="margin-top:12px">▤ Manage Phones ({{ phones|length }})</a>
+  </div>
+
+  <!-- Recent -->
+  <div>
+    <div class="section-title">Recent Alerts</div>
+    {% for a in recent %}
+    <a class="rec" href="{{ url_for('alert_detail', alert_id=a.id) }}" style="display:block">
+      <div class="rec-head">
+        <div class="rec-title">{{ alert_badge(a.severity) }} <b style="margin-left:6px">{{ a.title or a.message|truncate(40) }}</b></div>
+        <span class="muted" style="font-size:11px">{{ a.created_at }}</span>
+      </div>
+      <div class="rec-body" style="margin-top:6px">{{ a.message|truncate(110) }}</div>
+      <div class="rec-meta">
+        TARGET: {{ a.target }} &nbsp;//&nbsp;
+        DELIVERED {{ a.delivered }}/{{ a.total }} &nbsp;//&nbsp;
+        ACK <b style="color:var(--green)">{{ a.acked }}</b>/{{ a.total }}
+      </div>
+    </a>
+    {% else %}
+    <div class="empty" style="padding:40px">NO ALERTS DISPATCHED YET</div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+  // Reveal the phone picker only when "Selected phones" is chosen.
+  (function () {
+    var sel = document.getElementById("target-select");
+    var picker = document.getElementById("phone-picker");
+    function sync() { picker.style.display = sel.value === "SELECTED" ? "block" : "none"; }
+    sel.addEventListener("change", sync); sync();
+  })();
+</script>
+{% endblock %}
