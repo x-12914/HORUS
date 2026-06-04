@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="HORUS ALERT"
+            android:textColor="@color/green"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.15" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="18dp"
+            android:text="Air Alert receiver"
+            android:textColor="@color/dim" />
+
+        <TextView style="@style/Lbl" android:text="Server URL" />
+        <EditText
+            android:id="@+id/serverEt"
+            style="@style/Inp"
+            android:hint="https://horus.157.250.205.174.nip.io"
+            android:inputType="textUri" />
+
+        <TextView style="@style/Lbl" android:text="Enrolment token" />
+        <EditText
+            android:id="@+id/enrolEt"
+            style="@style/Inp"
+            android:inputType="textPassword" />
+
+        <TextView style="@style/Lbl" android:text="Label / callsign" />
+        <EditText
+            android:id="@+id/labelEt"
+            style="@style/Inp"
+            android:hint="Alpha-1"
+            android:inputType="text" />
+
+        <Button
+            android:id="@+id/enrolBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="ENROL THIS PHONE" />
+
+        <TextView
+            android:id="@+id/statusTv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="Not enrolled"
+            android:textColor="@color/amber" />
+
+        <Button
+            android:id="@+id/toggleBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="START MONITORING" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="18dp"
+            android:layout_marginBottom="18dp"
+            android:background="@color/line" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:text="RECENT ALERTS"
+            android:textColor="@color/dim"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/alertsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#0A0E0C</color>
+    <color name="panel">#111A15</color>
+    <color name="line">#233029</color>
+    <color name="text">#C8D6CC</color>
+    <color name="dim">#7C8C81</color>
+    <color name="green">#38F08F</color>
+    <color name="amber">#FFB627</color>
+    <color name="red">#FF4D4D</color>
+    <color name="alertbg">#B11111</color>
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+    <color name="ic_launcher_background">#0E1814</color>
+</resources>

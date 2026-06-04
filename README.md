@@ -185,6 +185,11 @@ curl -X POST https://horus.157.250.205.174.nip.io/api/alerts/ack \
 Enrolment is disabled until `HORUS_ALERT_TOKEN` is set; poll/ack authenticate by
 the phone's own `device_token` (so manually-enrolled phones work without it).
 
+A ready-to-build **Android client** for this API lives in
+[`android/HorusAlert/`](android/HorusAlert/) — open it in Android Studio, enter
+the server URL + enrolment token, and it receives alerts (full-screen siren for
+`AIR ALERT`). See that folder's README.
+
 ## Project layout
 
 ```

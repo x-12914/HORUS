@@ -13,3 +13,13 @@ horus.db
 *.db
 *.db-wal
 *.db-shm
+
+# Android app build artifacts / local config
+android/**/build/
+android/**/.gradle/
+android/**/local.properties
+android/**/.idea/
+android/**/.cxx/
+*.apk
+*.aab
+*.iml
