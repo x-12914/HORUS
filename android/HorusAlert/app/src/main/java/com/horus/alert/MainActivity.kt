@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -67,12 +68,15 @@ class MainActivity : AppCompatActivity() {
             return
         }
         statusTv.text = "Enrolling…"
+        Log.i(TAG, "enrolling '$label' at $server")
         lifecycleScope.launch {
             try {
                 val token = HorusApi.register(server, enrol, label, "android")
                 Prefs.setDeviceToken(this@MainActivity, token)
+                Log.i(TAG, "enrol OK; device token stored (len=${token.length})")
                 toast("Enrolled successfully")
             } catch (e: Exception) {
+                Log.e(TAG, "enrol failed", e)
                 toast("Enrol failed: ${e.message}")
             }
             refreshStatus()
@@ -83,6 +87,7 @@ class MainActivity : AppCompatActivity() {
         saveFields()
         if (Prefs.isRunning(this)) {
             AlertPollService.stop(this)
+            Log.i(TAG, "monitoring stopped by user")
             toast("Monitoring stopped")
         } else {
             if (Prefs.getDeviceToken(this).isEmpty()) {
@@ -90,6 +95,7 @@ class MainActivity : AppCompatActivity() {
                 return
             }
             AlertPollService.start(this)
+            Log.i(TAG, "monitoring started by user")
             toast("Monitoring started")
         }
         toggleBtn.postDelayed({ refreshStatus() }, 300)
@@ -148,4 +154,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_SHORT).show()
+
+    companion object {
+        private const val TAG = "HORUS"
+    }
 }

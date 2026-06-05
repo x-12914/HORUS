@@ -10,6 +10,7 @@ import android.content.Intent
 import android.media.RingtoneManager
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +40,7 @@ class AlertPollService : Service() {
         Prefs.setRunning(this, true)
         if (!polling) {
             polling = true
+            Log.i(TAG, "service started; polling every ${POLL_MS}ms")
             scope.launch { loop() }
         }
         return START_STICKY
@@ -49,17 +51,23 @@ class AlertPollService : Service() {
             try {
                 val server = Prefs.getServer(this)
                 val token = Prefs.getDeviceToken(this)
-                if (server.isNotEmpty() && token.isNotEmpty()) {
-                    for (a in HorusApi.poll(server, token)) {
+                if (server.isEmpty() || token.isEmpty()) {
+                    Log.w(TAG, "skip poll: server or device token not set")
+                } else {
+                    val alerts = HorusApi.poll(server, token)
+                    if (alerts.isNotEmpty()) Log.i(TAG, "poll: ${alerts.size} new alert(s)")
+                    for (a in alerts) {
+                        Log.i(TAG, "alert #${a.id} [${a.severity}] ${a.message}")
                         AlertStore.add(this, a)
                         notifyAlert(a)
                     }
                 }
-            } catch (_: Exception) {
-                // Transient network error — ignore and retry next cycle.
+            } catch (e: Exception) {
+                Log.w(TAG, "poll failed: ${e.message}")
             }
             delay(POLL_MS)
         }
+        Log.i(TAG, "service stopping")
         polling = false
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -135,6 +143,7 @@ class AlertPollService : Service() {
     }
 
     companion object {
+        const val TAG = "HORUS"
         const val POLL_MS = 4_000L
         const val SVC_NOTIF_ID = 1001
         const val CH_SVC = "svc"

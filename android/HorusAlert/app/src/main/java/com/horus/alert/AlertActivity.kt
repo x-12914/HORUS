@@ -4,6 +4,7 @@ import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
@@ -35,10 +36,12 @@ class AlertActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.alertSeverity).text = severity
         findViewById<TextView>(R.id.alertTitle).text = title ?: "HORUS Alert"
         findViewById<TextView>(R.id.alertMessage).text = message
+        Log.i("HORUS", "AlertActivity shown for alert #$id [$severity]")
 
         if (severity.equals("AIR ALERT", ignoreCase = true)) playAlarm()
 
         findViewById<Button>(R.id.ackButton).setOnClickListener {
+            Log.i("HORUS", "user acknowledged alert #$id")
             stopAlarm()
             AlertStore.markAck(this, id)
             val server = Prefs.getServer(this)

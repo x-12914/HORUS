@@ -1,5 +1,6 @@
 package com.horus.alert
 
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -7,6 +8,8 @@ import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+
+private const val TAG = "HORUS"
 
 /** One alert as received from the server. */
 data class AlertMsg(
@@ -74,6 +77,7 @@ object HorusApi {
             val code = conn.responseCode
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
             val text = stream?.bufferedReader()?.use { it.readText() } ?: ""
+            Log.d(TAG, "POST $urlStr -> $code")
             if (code !in 200..299) throw IOException("HTTP $code: $text")
             return if (text.isBlank()) JSONObject() else JSONObject(text)
         } finally {
