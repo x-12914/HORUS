@@ -122,7 +122,7 @@ ASSETS = [
     ("AST-0010", "Spare Wheel Set", "Vehicle Part", "SN-VW-6650", None),
 ]
 
-# Demo phones for the Air Alert console (label, device_token, platform).
+# Demo phones for the Defense Alert console (label, device_token, platform).
 # Tokens are fixed demo values — real phones get random tokens on enrolment.
 PHONES = [
     ("Alpha-1", "demo-token-alpha1-0001", "android"),

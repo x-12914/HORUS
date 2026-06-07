@@ -125,7 +125,7 @@ class AlertPollService : Service() {
             NotificationChannel(CH_ALERT, "Alerts", NotificationManager.IMPORTANCE_HIGH)
         )
         nm.createNotificationChannel(
-            NotificationChannel(CH_AIR, "Air Alerts", NotificationManager.IMPORTANCE_HIGH).apply {
+            NotificationChannel(CH_AIR, "Defense Alerts", NotificationManager.IMPORTANCE_HIGH).apply {
                 setSound(
                     RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
                     Notification.AUDIO_ATTRIBUTES_DEFAULT

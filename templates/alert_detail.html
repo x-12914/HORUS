@@ -7,7 +7,7 @@
 <div class="detail-head">
   <div>
     <div class="muted mono-id">ALERT #{{ '%04d' % alert.id }}</div>
-    <div class="detail-code" style="font-size:24px">{{ alert.title or 'Air Alert' }}</div>
+    <div class="detail-code" style="font-size:24px">{{ alert.title or 'Defense Alert' }}</div>
     <div class="tag-meta">
       {{ alert_badge(alert.severity) }}
       <span class="badge b-grey">TARGET: {{ alert.target }}</span>

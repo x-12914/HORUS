@@ -1,6 +1,6 @@
 # HORUS Alert — Android app
 
-The phone client for HORUS **Air Alert**. It enrols with the server, runs a
+The phone client for HORUS **Defense Alert**. It enrols with the server, runs a
 foreground service that polls for alerts every few seconds, and raises a
 high-priority notification — with a full-screen siren screen + alarm sound for
 `AIR ALERT` severity. Tapping an alert lets the user **acknowledge** it, which
@@ -29,7 +29,7 @@ SDK 34. `minSdk` is 26 (Android 8.0).
 4. Tap **ENROL THIS PHONE** → on success it stores a device token.
 5. Tap **START MONITORING** → the foreground service begins polling. Grant the
    notification permission when prompted.
-6. Trigger an alert from the HORUS dashboard (**Air Alert**). Within a few
+6. Trigger an alert from the HORUS dashboard (**Defense Alert**). Within a few
    seconds the phone shows a notification; an `AIR ALERT` lights the screen with
    the full-screen siren. Tap **ACKNOWLEDGE** — the dashboard updates.
 

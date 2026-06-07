@@ -28,8 +28,8 @@
         <a href="{{ url_for('missions') }}" class="{{ 'active' if request.endpoint in ('missions','mission_detail','mission_new','mission_edit') }}"><span>▣</span> Missions</a>
         <a href="{{ url_for('casualties_register') }}" class="{{ 'active' if request.endpoint=='casualties_register' }}"><span>✚</span> Casualty Register</a>
         <a href="{{ url_for('feeds_wall') }}" class="{{ 'active' if request.endpoint=='feeds_wall' }}"><span>⬡</span> Drone Feed</a>
-        <a href="{{ url_for('tracking_dashboard') }}" class="{{ 'active' if request.endpoint in ('tracking_dashboard','assets_list','asset_new','asset_edit','rooms_list') }}"><span>◎</span> Device Tracking</a>
-        <a href="{{ url_for('alerts_console') }}" class="{{ 'active' if request.endpoint in ('alerts_console','alert_detail','phones_list') }}"><span>▲</span> Air Alert</a>
+        <a href="{{ url_for('tracking_dashboard') }}" class="{{ 'active' if request.endpoint in ('tracking_dashboard','assets_list','asset_new','asset_edit','rooms_list') }}"><span>◎</span> Asset Tracking</a>
+        <a href="{{ url_for('alerts_console') }}" class="{{ 'active' if request.endpoint in ('alerts_console','alert_detail','phones_list') }}"><span>▲</span> Defense Alert</a>
         <a href="{{ url_for('reports') }}" class="{{ 'active' if request.endpoint=='reports' }}"><span>▤</span> Reports</a>
         <a href="{{ url_for('analytics') }}" class="{{ 'active' if request.endpoint=='analytics' }}"><span>◇</span> Strategic Analytics</a>
       </nav>

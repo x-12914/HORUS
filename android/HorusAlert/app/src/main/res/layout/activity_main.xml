@@ -24,7 +24,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="18dp"
-            android:text="Air Alert receiver"
+            android:text="Defense Alert receiver"
             android:textColor="@color/dim" />
 
         <TextView style="@style/Lbl" android:text="Server URL" />

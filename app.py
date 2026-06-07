@@ -685,7 +685,7 @@ def track_ingest():
 
 
 # ===========================================================================
-# Air Alert — push messages from the dashboard to phones
+# Defense Alert — push messages from the dashboard to phones
 # ===========================================================================
 @app.route("/alerts")
 def alerts_console():
