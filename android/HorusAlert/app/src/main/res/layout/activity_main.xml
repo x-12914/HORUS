@@ -27,18 +27,23 @@
             android:text="Defense Alert receiver"
             android:textColor="@color/dim" />
 
-        <TextView style="@style/Lbl" android:text="Server URL" />
-        <EditText
-            android:id="@+id/serverEt"
-            style="@style/Inp"
-            android:hint="https://horus.157.250.205.174.nip.io"
-            android:inputType="textUri" />
+        <TextView style="@style/Lbl" android:text="Server (fixed)" />
+        <TextView
+            android:id="@+id/serverTv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text"
+            android:textSize="13sp"
+            android:textIsSelectable="true" />
 
-        <TextView style="@style/Lbl" android:text="Enrolment token" />
-        <EditText
-            android:id="@+id/enrolEt"
-            style="@style/Inp"
-            android:inputType="textPassword" />
+        <TextView style="@style/Lbl" android:text="Device ID (auto)" />
+        <TextView
+            android:id="@+id/deviceTv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/dim"
+            android:textSize="12sp"
+            android:textIsSelectable="true" />
 
         <TextView style="@style/Lbl" android:text="Label / callsign" />
         <EditText

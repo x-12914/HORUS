@@ -804,29 +804,43 @@ def phone_delete(phone_id):
 # poll / ack: authenticated by the phone's own device_token.
 @app.route("/api/alerts/register", methods=["POST"])
 def api_alert_register():
+    # A phone may self-enrol with its own device id (e.g. Android ID). Without
+    # the optional shared token it lands as PENDING (active=0) and any operator
+    # must approve it in the dashboard before it receives alerts. Supplying the
+    # correct HORUS_ALERT_TOKEN auto-approves the phone (active=1).
     token = os.environ.get("HORUS_ALERT_TOKEN")
-    if not token:
-        return {"error": "enrolment disabled — set HORUS_ALERT_TOKEN"}, 503
-    if request.headers.get("X-HORUS-ENROLL") != token:
-        return {"error": "unauthorized"}, 401
+    trusted = bool(token) and request.headers.get("X-HORUS-ENROLL") == token
 
     data = request.get_json(silent=True) or request.form
     device_token = (data.get("device_token") or "").strip() or secrets.token_hex(16)
     label = (data.get("label") or "Unnamed phone").strip()
     platform = (data.get("platform") or "").strip()
 
-    existing = db.query("SELECT id FROM phones WHERE device_token=?", (device_token,), one=True)
+    existing = db.query(
+        "SELECT id, active FROM phones WHERE device_token=?", (device_token,), one=True
+    )
     if existing:
-        db.execute(
-            "UPDATE phones SET label=?, platform=?, active=1 WHERE id=?",
-            (label, platform, existing["id"]),
-        )
+        if trusted:
+            db.execute(
+                "UPDATE phones SET label=?, platform=?, active=1 WHERE id=?",
+                (label, platform, existing["id"]),
+            )
+            active = 1
+        else:
+            # Update details but never silently re-disable or auto-approve.
+            db.execute(
+                "UPDATE phones SET label=?, platform=? WHERE id=?",
+                (label, platform, existing["id"]),
+            )
+            active = existing["active"]
     else:
+        active = 1 if trusted else 0
         db.execute(
-            "INSERT INTO phones (label, device_token, platform) VALUES (?,?,?)",
-            (label, device_token, platform),
+            "INSERT INTO phones (label, device_token, platform, active) VALUES (?,?,?,?)",
+            (label, device_token, platform, active),
         )
-    return {"ok": True, "device_token": device_token}
+
+    return {"ok": True, "device_token": device_token, "pending": active == 0}
 
 
 def _phone_from_token():

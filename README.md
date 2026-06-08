@@ -153,19 +153,22 @@ talk to HORUS over three endpoints. Delivery is **poll-based** (the app fetches
 pending alerts on an interval) — simple and self-contained; a real-time push
 (FCM/APNs or WebSocket) can be layered on later without changing this model.
 
-**1. Enrol** (one-time per phone) — gated by a shared enrolment token:
+**1. Enrol** (one-time per phone) — the phone supplies its own stable device id
+(the Android app uses the Android ID), no token to type:
 
-```
-HORUS_ALERT_TOKEN=<long-random-token>      # add to the systemd unit, then restart
-```
 ```bash
 curl -X POST https://horus.157.250.205.174.nip.io/api/alerts/register \
-  -H "X-HORUS-ENROLL: <enrolment-token>" -H "Content-Type: application/json" \
-  -d '{"label":"Alpha-1","platform":"android"}'
-# → {"ok":true,"device_token":"<the phone's own secret>"}
+  -H "Content-Type: application/json" \
+  -d '{"device_token":"android-<id>","label":"Alpha-1","platform":"android"}'
+# → {"ok":true,"device_token":"android-<id>","pending":true}
 ```
-The app stores the returned `device_token` and uses it for everything below.
-(You can also enrol phones manually from **Defense Alert → Manage Phones**.)
+A freshly enrolled phone is **PENDING** — it receives nothing until **any
+operator approves it** in **Defense Alert → Manage Phones** (click ✓ Approve).
+The phone uses its `device_token` for everything below.
+
+> Optional auto-approve: if `HORUS_ALERT_TOKEN` is set on the server and the
+> request includes a matching `X-HORUS-ENROLL` header, the phone is approved
+> immediately (skips the pending step). Most deployments don't need it.
 
 **2. Poll** for pending alerts (every few seconds) — marks them delivered:
 
@@ -182,13 +185,14 @@ curl -X POST https://horus.157.250.205.174.nip.io/api/alerts/ack \
   -H "Content-Type: application/json" -d '{"device_token":"<token>","alert_id":12}'
 ```
 
-Enrolment is disabled until `HORUS_ALERT_TOKEN` is set; poll/ack authenticate by
-the phone's own `device_token` (so manually-enrolled phones work without it).
+Poll/ack authenticate by the phone's own `device_token`, and only **approved**
+(active) phones receive alerts.
 
 A ready-to-build **Android client** for this API lives in
-[`android/HorusAlert/`](android/HorusAlert/) — open it in Android Studio, enter
-the server URL + enrolment token, and it receives alerts (full-screen siren for
-`AIR ALERT`). See that folder's README.
+[`android/HorusAlert/`](android/HorusAlert/) — open it in Android Studio and run.
+The server URL is built in and the phone self-identifies by its Android ID, so
+the operator only sets a label, taps **Enrol**, and an operator approves it in
+the dashboard. See that folder's README.
 
 ## Project layout
 

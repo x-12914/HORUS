@@ -57,12 +57,11 @@ class AlertPollService : Service() {
     private suspend fun loop() {
         while (Prefs.isRunning(this)) {
             try {
-                val server = Prefs.getServer(this)
                 val token = Prefs.getDeviceToken(this)
-                if (server.isEmpty() || token.isEmpty()) {
-                    Log.w(TAG, "skip poll: server or device token not set")
+                if (token.isEmpty()) {
+                    Log.w(TAG, "skip poll: device not enrolled")
                 } else {
-                    val alerts = HorusApi.poll(server, token)
+                    val alerts = HorusApi.poll(token)
                     if (alerts.isNotEmpty()) Log.i(TAG, "poll: ${alerts.size} new alert(s)")
                     for (a in alerts) {
                         Log.i(TAG, "alert #${a.id} [${a.severity}] ${a.message}")
@@ -72,7 +71,12 @@ class AlertPollService : Service() {
                     if (alerts.isNotEmpty()) updateAlarmState()
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "poll failed: ${e.message}")
+                val msg = e.message ?: ""
+                if (msg.contains("401")) {
+                    Log.i(TAG, "awaiting approval — phone not yet enabled in the dashboard")
+                } else {
+                    Log.w(TAG, "poll failed: $msg")
+                }
             }
             delay(POLL_MS)
         }
@@ -89,9 +93,8 @@ class AlertPollService : Service() {
             if (id >= 0) {
                 AlertStore.markAck(this@AlertPollService, id)
                 try {
-                    val server = Prefs.getServer(this@AlertPollService)
                     val token = Prefs.getDeviceToken(this@AlertPollService)
-                    if (token.isNotEmpty()) HorusApi.ack(server, token, id)
+                    if (token.isNotEmpty()) HorusApi.ack(token, id)
                 } catch (e: Exception) {
                     Log.w(TAG, "ack failed: ${e.message}")
                 }

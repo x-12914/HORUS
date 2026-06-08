@@ -24,23 +24,29 @@ SDK 34. `minSdk` is 26 (Android 8.0).
 
 ## Use it
 
-1. **Server URL** — e.g. `https://horus.157.250.205.174.nip.io` (use the HTTPS
-   URL; the app talks to `/api/alerts/*`).
-2. **Enrolment token** — the value of `HORUS_ALERT_TOKEN` set on the server.
-3. **Label / callsign** — how this phone shows up in the dashboard (e.g. `Alpha-1`).
-4. Tap **ENROL THIS PHONE** → on success it stores a device token.
-5. Tap **START MONITORING** → the foreground service begins polling. Grant the
-   notification permission when prompted.
-6. Trigger an alert from the HORUS dashboard (**Defense Alert**). Within a few
-   seconds the phone shows a notification; an `AIR ALERT` lights the screen with
-   the full-screen siren. Tap **ACKNOWLEDGE** — the dashboard updates.
+The **server URL is built in** and the phone **identifies itself automatically**
+by its Android ID — there's nothing to type but a label.
+
+1. **Label / callsign** — how this phone shows up in the dashboard (e.g. `Alpha-1`).
+2. Tap **ENROL THIS PHONE** → it registers using its Android ID and lands as
+   **PENDING** in the dashboard.
+3. An operator opens **Defense Alert → Manage Phones** and clicks **✓ Approve**
+   for this phone (it shows the label and device id).
+4. Tap **START MONITORING** → the foreground service begins polling. Grant the
+   notification permission when prompted. (Before approval, logcat shows
+   `awaiting approval`; once approved, alerts start arriving.)
+5. Trigger an alert from the HORUS dashboard (**Defense Alert**). The phone's
+   screen lights up with the full-screen siren and a looping alarm that **does
+   not stop until you tap ACKNOWLEDGE**.
+
+To point at a different server, change `Config.SERVER` and rebuild.
 
 ## How it talks to the server
 
 | Action | Endpoint | Auth |
 |---|---|---|
-| Enrol | `POST /api/alerts/register` | header `X-HORUS-ENROLL: <enrol token>` |
-| Poll | `POST /api/alerts/poll` | body `device_token` |
+| Enrol | `POST /api/alerts/register` | body `device_token` (Android ID) — lands PENDING |
+| Poll | `POST /api/alerts/poll` | body `device_token` (only approved phones) |
 | Acknowledge | `POST /api/alerts/ack` | body `device_token` + `alert_id` |
 
 ## Notes & limitations

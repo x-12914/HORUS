@@ -17,11 +17,11 @@
             <td class="muted" style="font-size:11px">
               <code>{{ p.device_token[:10] }}…</code>
             </td>
-            <td>{% if p.active %}<span class="badge b-green">ACTIVE</span>{% else %}<span class="badge b-grey">DISABLED</span>{% endif %}</td>
+            <td>{% if p.active %}<span class="badge b-green">ACTIVE</span>{% else %}<span class="badge b-amber">PENDING</span>{% endif %}</td>
             <td class="muted" style="font-size:11px">{{ p.last_seen or 'never' }}</td>
             <td style="white-space:nowrap">
               <form class="inline-form" method="post" action="{{ url_for('phone_toggle', phone_id=p.id) }}">
-                <button class="btn btn-sm" type="submit">{{ 'Disable' if p.active else 'Enable' }}</button>
+                <button class="btn btn-sm {{ '' if p.active else 'btn-primary' }}" type="submit">{{ 'Disable' if p.active else '✓ Approve' }}</button>
               </form>
               <form class="inline-form" method="post" action="{{ url_for('phone_delete', phone_id=p.id) }}" data-confirm="Remove phone {{ p.label }}?">
                 <button class="btn btn-sm btn-danger" type="submit">✕</button>
@@ -35,8 +35,9 @@
       </table>
     </div>
     <p class="muted" style="margin-top:12px; font-size:11px; letter-spacing:.5px">
-      ▸ The full device token is the phone app's secret for polling alerts — it's only shown in full at enrolment via the API.
-      Phones can also self-enrol through <code>/api/alerts/register</code>.
+      ▸ Phones self-enrol from the app and appear here as <span class="badge b-amber">PENDING</span>.
+      Any operator can <b style="color:var(--green)">✓ Approve</b> a phone to start delivering alerts to it.
+      Approve only devices you recognise.
     </p>
   </div>
 

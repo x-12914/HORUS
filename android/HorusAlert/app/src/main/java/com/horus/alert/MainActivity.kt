@@ -18,8 +18,6 @@ import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var serverEt: EditText
-    private lateinit var enrolEt: EditText
     private lateinit var labelEt: EditText
     private lateinit var statusTv: TextView
     private lateinit var alertsContainer: LinearLayout
@@ -29,15 +27,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        serverEt = findViewById(R.id.serverEt)
-        enrolEt = findViewById(R.id.enrolEt)
         labelEt = findViewById(R.id.labelEt)
         statusTv = findViewById(R.id.statusTv)
         alertsContainer = findViewById(R.id.alertsContainer)
         toggleBtn = findViewById(R.id.toggleBtn)
 
-        serverEt.setText(Prefs.getServer(this))
-        enrolEt.setText(Prefs.getEnrolToken(this))
+        findViewById<TextView>(R.id.serverTv).text = Config.SERVER
+        findViewById<TextView>(R.id.deviceTv).text = DeviceId.get(this)
         labelEt.setText(Prefs.getLabel(this))
 
         findViewById<Button>(R.id.enrolBtn).setOnClickListener { enrol() }
@@ -52,29 +48,19 @@ class MainActivity : AppCompatActivity() {
         refreshStatus()
     }
 
-    private fun saveFields() {
-        Prefs.setServer(this, serverEt.text.toString().trim())
-        Prefs.setEnrolToken(this, enrolEt.text.toString().trim())
-        Prefs.setLabel(this, labelEt.text.toString().trim())
-    }
-
     private fun enrol() {
-        saveFields()
-        val server = Prefs.getServer(this)
-        val enrol = Prefs.getEnrolToken(this)
-        val label = Prefs.getLabel(this).ifEmpty { "Unnamed phone" }
-        if (server.isEmpty() || enrol.isEmpty()) {
-            toast("Enter server URL and enrolment token")
-            return
-        }
+        val label = labelEt.text.toString().trim().ifEmpty { "Unnamed phone" }
+        Prefs.setLabel(this, label)
+        val deviceToken = DeviceId.get(this)
+        Prefs.setDeviceToken(this, deviceToken)
+
         statusTv.text = "Enrolling…"
-        Log.i(TAG, "enrolling '$label' at $server")
+        Log.i(TAG, "enrolling '$label' as $deviceToken")
         lifecycleScope.launch {
             try {
-                val token = HorusApi.register(server, enrol, label, "android")
-                Prefs.setDeviceToken(this@MainActivity, token)
-                Log.i(TAG, "enrol OK; device token stored (len=${token.length})")
-                toast("Enrolled successfully")
+                val pending = HorusApi.register(deviceToken, label, "android")
+                Log.i(TAG, "enrol OK; pending=$pending")
+                toast(if (pending) "Enrolled — awaiting operator approval" else "Enrolled & active")
             } catch (e: Exception) {
                 Log.e(TAG, "enrol failed", e)
                 toast("Enrol failed: ${e.message}")
@@ -84,7 +70,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun toggleService() {
-        saveFields()
         if (Prefs.isRunning(this)) {
             AlertPollService.stop(this)
             Log.i(TAG, "monitoring stopped by user")
