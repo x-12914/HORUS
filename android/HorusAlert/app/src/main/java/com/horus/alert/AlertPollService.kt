@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.media.RingtoneManager
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -20,8 +19,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Foreground service that polls HORUS for new alerts every few seconds and
- * raises a high-priority notification (full-screen + alarm for AIR ALERT).
+ * Foreground service that polls HORUS for new alerts. Each unacknowledged alert
+ * keeps a looping alarm + vibration going and shows a persistent (non-dismissable)
+ * notification with an ACKNOWLEDGE action — the alarm only stops once every
+ * alert has been acknowledged on the device.
  */
 class AlertPollService : Service() {
 
@@ -37,12 +38,19 @@ class AlertPollService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Acknowledgement delivered from a notification action / activity / list.
+        if (intent?.action == ACTION_ACK) {
+            handleAck(intent.getIntExtra("id", -1))
+            return START_STICKY
+        }
+
         Prefs.setRunning(this, true)
         if (!polling) {
             polling = true
             Log.i(TAG, "service started; polling every ${POLL_MS}ms")
             scope.launch { loop() }
         }
+        updateAlarmState()   // resume alarm if alerts are still unacknowledged
         return START_STICKY
     }
 
@@ -61,6 +69,7 @@ class AlertPollService : Service() {
                         AlertStore.add(this, a)
                         notifyAlert(a)
                     }
+                    if (alerts.isNotEmpty()) updateAlarmState()
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "poll failed: ${e.message}")
@@ -69,40 +78,82 @@ class AlertPollService : Service() {
         }
         Log.i(TAG, "service stopping")
         polling = false
+        AlarmPlayer.stop()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
-    private fun notifyAlert(a: AlertMsg) {
-        val isAir = a.severity.equals("AIR ALERT", ignoreCase = true)
-        val nm = getSystemService(NotificationManager::class.java)
+    /** Mark acknowledged locally + on the server, clear its notification, re-evaluate the alarm. */
+    private fun handleAck(id: Int) {
+        scope.launch {
+            if (id >= 0) {
+                AlertStore.markAck(this@AlertPollService, id)
+                try {
+                    val server = Prefs.getServer(this@AlertPollService)
+                    val token = Prefs.getDeviceToken(this@AlertPollService)
+                    if (token.isNotEmpty()) HorusApi.ack(server, token, id)
+                } catch (e: Exception) {
+                    Log.w(TAG, "ack failed: ${e.message}")
+                }
+                getSystemService(NotificationManager::class.java).cancel(id)
+                Log.i(TAG, "ack handled for #$id")
+            }
+            updateAlarmState()
+            // If we were only started to handle an ack (not monitoring), don't linger.
+            if (!polling && !Prefs.isRunning(this@AlertPollService)) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
+        }
+    }
 
-        val tapIntent = Intent(this, AlertActivity::class.java).apply {
+    /** Alarm on while any stored alert is unacknowledged; off otherwise. */
+    private fun updateAlarmState() {
+        val anyPending = AlertStore.all(this).any { !it.acknowledged }
+        if (anyPending) AlarmPlayer.start(this) else AlarmPlayer.stop()
+    }
+
+    private fun notifyAlert(a: AlertMsg) {
+        val nm = getSystemService(NotificationManager::class.java)
+        val isAir = a.severity.equals("AIR ALERT", ignoreCase = true)
+
+        val fsIntent = Intent(this, AlertActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra("id", a.id)
             putExtra("title", a.title)
             putExtra("message", a.message)
             putExtra("severity", a.severity)
         }
-        val pi = PendingIntent.getActivity(
-            this, a.id, tapIntent,
+        val fsPi = PendingIntent.getActivity(
+            this, a.id, fsIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val ackIntent = Intent(this, AlertPollService::class.java).apply {
+            action = ACTION_ACK
+            putExtra("id", a.id)
+        }
+        val ackPi = PendingIntent.getService(
+            this, ACK_REQ_BASE + a.id, ackIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val heading = (a.title?.takeIf { it.isNotBlank() } ?: "HORUS") +
             if (isAir) " — AIR ALERT" else ""
 
-        val builder = NotificationCompat.Builder(this, if (isAir) CH_AIR else CH_ALERT)
+        val builder = NotificationCompat.Builder(this, CH_ALERT)
             .setSmallIcon(R.drawable.ic_stat_alert)
             .setContentTitle(heading)
             .setContentText(a.message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(a.message))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setAutoCancel(true)
-            .setContentIntent(pi)
+            .setOngoing(true)        // can't be swiped away
+            .setAutoCancel(false)
+            .setContentIntent(fsPi)
+            .setFullScreenIntent(fsPi, true)
+            .addAction(R.drawable.ic_stat_alert, "ACKNOWLEDGE", ackPi)
 
-        if (isAir) builder.setFullScreenIntent(pi, true)
         nm.notify(a.id, builder.build())
     }
 
@@ -117,21 +168,15 @@ class AlertPollService : Service() {
 
     private fun createChannels() {
         val nm = getSystemService(NotificationManager::class.java)
-
         nm.createNotificationChannel(
             NotificationChannel(CH_SVC, "Service", NotificationManager.IMPORTANCE_LOW)
         )
+        // High importance for heads-up display, but silent: continuous audio +
+        // vibration is driven by AlarmPlayer so it can persist until acknowledged.
         nm.createNotificationChannel(
-            NotificationChannel(CH_ALERT, "Alerts", NotificationManager.IMPORTANCE_HIGH)
-        )
-        nm.createNotificationChannel(
-            NotificationChannel(CH_AIR, "Defense Alerts", NotificationManager.IMPORTANCE_HIGH).apply {
-                setSound(
-                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
-                    Notification.AUDIO_ATTRIBUTES_DEFAULT
-                )
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 600, 300, 600, 300, 600)
+            NotificationChannel(CH_ALERT, "Defense Alerts", NotificationManager.IMPORTANCE_HIGH).apply {
+                setSound(null, null)
+                enableVibration(false)
                 setBypassDnd(true)
             }
         )
@@ -139,6 +184,7 @@ class AlertPollService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        AlarmPlayer.stop()
         scope.cancel()
     }
 
@@ -147,8 +193,9 @@ class AlertPollService : Service() {
         const val POLL_MS = 4_000L
         const val SVC_NOTIF_ID = 1001
         const val CH_SVC = "svc"
-        const val CH_ALERT = "alerts"
-        const val CH_AIR = "airalert"
+        const val CH_ALERT = "alerts2"
+        const val ACTION_ACK = "com.horus.alert.ACK"
+        const val ACK_REQ_BASE = 100_000
 
         fun start(c: Context) {
             val i = Intent(c, AlertPollService::class.java)
@@ -162,6 +209,15 @@ class AlertPollService : Service() {
         fun stop(c: Context) {
             Prefs.setRunning(c, false)
             c.stopService(Intent(c, AlertPollService::class.java))
+        }
+
+        /** Acknowledge an alert (stops the alarm when none remain). */
+        fun acknowledge(c: Context, id: Int) {
+            val i = Intent(c, AlertPollService::class.java).apply {
+                action = ACTION_ACK
+                putExtra("id", id)
+            }
+            c.startService(i)
         }
     }
 }

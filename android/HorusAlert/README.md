@@ -2,9 +2,11 @@
 
 The phone client for HORUS **Defense Alert**. It enrols with the server, runs a
 foreground service that polls for alerts every few seconds, and raises a
-high-priority notification — with a full-screen siren screen + alarm sound for
-`AIR ALERT` severity. Tapping an alert lets the user **acknowledge** it, which
-reports back to the dashboard.
+full-screen siren screen with a **looping alarm + vibration that does not stop
+until the alert is acknowledged on the device**. The persistent notification
+can't be swiped away and carries an **ACKNOWLEDGE** action; acknowledging from
+the full-screen screen, the notification, or the in-app list stops the alarm
+and reports the acknowledgement back to the dashboard.
 
 Pure AndroidX + Kotlin coroutines + `HttpURLConnection`/`org.json` — no Retrofit
 / Firebase, so there's nothing external to configure.

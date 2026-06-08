@@ -129,16 +129,9 @@ class MainActivity : AppCompatActivity() {
                 ackBtn.isEnabled = false
             }
             ackBtn.setOnClickListener {
-                AlertStore.markAck(this, a.id)
-                val server = Prefs.getServer(this)
-                val token = Prefs.getDeviceToken(this)
-                lifecycleScope.launch {
-                    try {
-                        HorusApi.ack(server, token, a.id)
-                    } catch (_: Exception) {
-                    }
-                    renderAlerts()
-                }
+                AlertStore.markAck(this, a.id)            // instant local state
+                AlertPollService.acknowledge(this, a.id)  // server ack + stop alarm
+                renderAlerts()
             }
             alertsContainer.addView(card)
         }

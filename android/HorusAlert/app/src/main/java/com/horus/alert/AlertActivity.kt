@@ -1,7 +1,5 @@
 package com.horus.alert
 
-import android.media.Ringtone
-import android.media.RingtoneManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -9,13 +7,13 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
 
-/** Full-screen alert shown for AIR ALERTs (and when an alert is tapped). */
+/**
+ * Full-screen alert screen. The alarm sound/vibration is owned by the service
+ * (so it persists regardless of this screen); acknowledging here routes to the
+ * service, which stops the alarm once no unacknowledged alerts remain.
+ */
 class AlertActivity : AppCompatActivity() {
-
-    private var ringtone: Ringtone? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,45 +36,11 @@ class AlertActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.alertMessage).text = message
         Log.i("HORUS", "AlertActivity shown for alert #$id [$severity]")
 
-        if (severity.equals("AIR ALERT", ignoreCase = true)) playAlarm()
-
         findViewById<Button>(R.id.ackButton).setOnClickListener {
             Log.i("HORUS", "user acknowledged alert #$id")
-            stopAlarm()
-            AlertStore.markAck(this, id)
-            val server = Prefs.getServer(this)
-            val token = Prefs.getDeviceToken(this)
-            lifecycleScope.launch {
-                try {
-                    if (id >= 0 && token.isNotEmpty()) HorusApi.ack(server, token, id)
-                } catch (_: Exception) {
-                }
-                finish()
-            }
+            AlertStore.markAck(this, id)             // instant local state
+            AlertPollService.acknowledge(this, id)   // server ack + stop alarm
+            finish()
         }
-    }
-
-    private fun playAlarm() {
-        try {
-            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            ringtone = RingtoneManager.getRingtone(applicationContext, uri).apply {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) isLooping = true
-                play()
-            }
-        } catch (_: Exception) {
-        }
-    }
-
-    private fun stopAlarm() {
-        try {
-            ringtone?.stop()
-        } catch (_: Exception) {
-        }
-        ringtone = null
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        stopAlarm()
     }
 }
