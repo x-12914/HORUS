@@ -25,12 +25,16 @@
 #include <HTTPClient.h>
 #include <NimBLEDevice.h>
 
+// WiFi creds + ingest token live in secrets.h (git-ignored).
+// Copy secrets.h.example -> secrets.h and fill in your values.
+#include "secrets.h"
+
 // =================== CONFIG ===================
-const char* WIFI_SSID   = "YOUR_WIFI_NAME";
-const char* WIFI_PASS   = "YOUR_WIFI_PASSWORD";
+const char* WIFI_SSID    = SECRET_WIFI_SSID;
+const char* WIFI_PASS    = SECRET_WIFI_PASS;
+const char* INGEST_TOKEN = SECRET_INGEST_TOKEN;
 
 const char* HORUS_URL   = "https://horus.157.250.205.174.nip.io/api/track";
-const char* INGEST_TOKEN = "153763d744dc739165b8329307d1e88e7d302d3cc5cea332"; // = server HORUS_INGEST_TOKEN
 const char* ROOM_CODE   = "ARM-A";        // this gateway's room code in HORUS
 const char* NAME_PREFIX = "HORUS-";       // only track beacons whose name starts with this
 
