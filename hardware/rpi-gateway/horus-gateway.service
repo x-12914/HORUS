@@ -1,0 +1,33 @@
+# systemd unit for the HORUS BLE room gateway (Raspberry Pi).
+# Install:
+#   sudo cp horus-gateway.service /etc/systemd/system/horus-gateway.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now horus-gateway
+#   journalctl -u horus-gateway -f
+#
+# Edit User, paths, and the Environment values for your Pi / room.
+
+[Unit]
+Description=HORUS BLE room gateway
+After=bluetooth.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/HORUS/hardware/rpi-gateway
+
+# --- config ---
+Environment="HORUS_URL=https://horus.157.250.205.174.nip.io"
+Environment="HORUS_INGEST_TOKEN=CHANGE_ME"
+Environment="HORUS_ROOM=ARM-A"
+# Optional tuning:
+# Environment="HORUS_RSSI_MIN=-85"
+# Environment="HORUS_SEEN_TIMEOUT=20"
+
+ExecStart=/usr/bin/python3 /home/pi/HORUS/hardware/rpi-gateway/gateway.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
