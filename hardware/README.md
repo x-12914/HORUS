@@ -15,9 +15,31 @@ module. It uses the standard beacon + gateway model:
 - Move a tag out of range → after a short timeout the gateway reports it
   **LEFT FACILITY**.
 
-## Bill of materials (this starter)
-- 1 × ESP32 dev board (the asset tag)
-- 1 × Raspberry Pi with Bluetooth (Pi 3/4/5/Zero 2 W) on Wi-Fi (the gateway)
+## Two ways to build the gateway
+
+**A. Raspberry Pi gateway** (`rpi-gateway/gateway.py`) — needs a full **Raspberry
+Pi** (the Linux board: Pi 3/4/5/Zero 2 W). The ESP32 is the tag.
+
+**B. ESP32 all-in-one gateway** (`esp32-gateway/esp32-gateway.ino`) — the ESP32
+scans **and** uploads over WiFi by itself. **No Raspberry Pi needed.** The tag is
+then any BLE beacon (a phone, a Pico W, or a second ESP32).
+
+> ⚠️ A Raspberry Pi **Pico** is a *microcontroller*, **not** a Linux Pi — you
+> cannot SSH into it and `gateway.py` will not run on it. If a Pico (or nothing)
+> is all you have besides the ESP32, use **option B** (ESP32 as gateway).
+
+### Beacon (asset tag) options
+Anything that advertises a BLE name starting with `HORUS-`:
+- **Phone** — a free "BLE beacon"/"iBeacon simulator" app set to broadcast the
+  name `HORUS-AST-0001`. Fastest way to test, zero extra hardware.
+- **ESP32** — `esp32-beacon/esp32-beacon.ino` (if the ESP32 isn't your gateway).
+- **Raspberry Pi Pico W** — can advertise over BLE (ask for the Pico W sketch).
+- A cheap dedicated **BLE beacon** ($2–5).
+
+## Bill of materials
+- 1 × ESP32 dev board (classic ESP32 with Bluetooth — not an S2)
+- A gateway host: **either** a Raspberry Pi (option A) **or** use the ESP32 itself (option B)
+- A BLE beacon for the tag (see options above)
 - USB power for each
 
 ---
@@ -54,7 +76,26 @@ curl -X POST https://horus.157.250.205.174.nip.io/api/track \
 
 ---
 
-## 2. Flash the ESP32 (asset tag)
+## 2 (Option B). ESP32 as the all-in-one gateway — no Pi
+
+Use this if you don't have a full Raspberry Pi. The ESP32 scans for the tag and
+posts to HORUS over WiFi.
+
+1. Arduino IDE → **Boards Manager** → install **“esp32 by Espressif Systems”**.
+2. Arduino IDE → **Library Manager** → install **“NimBLE-Arduino”** by h2zero.
+3. Open `esp32-gateway/esp32-gateway.ino` and fill in the CONFIG block:
+   `WIFI_SSID`, `WIFI_PASS`, `INGEST_TOKEN` (your server token), `ROOM_CODE` (e.g. `ARM-A`).
+4. Board = **ESP32 Dev Module**, select the port, **Upload**.
+5. Serial Monitor @ 115200 → you'll see WiFi connect, then BLE scans and
+   `-> /api/track … : 200` when it sees a `HORUS-` beacon.
+
+The "tag" is any BLE beacon (phone app / Pico W / second ESP32). Then skip to
+**section 4** (end-to-end test). The ESP32 beacon sketch below is only for when
+the ESP32 is the *tag* instead of the gateway.
+
+---
+
+## 2 (Option A). Flash the ESP32 as a tag (with a Raspberry Pi gateway)
 
 1. In **Arduino IDE**, install the **“esp32” by Espressif Systems** boards
    package (Boards Manager). No extra libraries needed.
