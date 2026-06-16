@@ -11,13 +11,18 @@
  *
  * REQUIREMENTS (Arduino IDE 2.x)
  *   - Boards: "esp32 by Espressif Systems"  (Boards Manager)
- *   - Library: "NimBLE-Arduino" by h2zero    (Library Manager)  <-- IMPORTANT
+ *   - Library: "NimBLE-Arduino" by h2zero   (Library Manager)  <-- IMPORTANT
  *       NimBLE is used instead of the built-in BLE library because it leaves
- *       enough RAM to also run WiFi + TLS. (Tested against NimBLE-Arduino 1.4.x.)
- *   - Board: a classic ESP32 (with Bluetooth). NOT an ESP32-S2 (no BT).
+ *       enough RAM to also run WiFi + TLS.
+ *   - Board must have Bluetooth LE (classic ESP32, ESP32-C3, ESP32-C6, S3...).
+ *     NOT an ESP32-S2 (no BT).
  *
- * Fill in the CONFIG block, select Board = "ESP32 Dev Module", Upload, then open
- * Serial Monitor @ 115200.
+ *   ESP32-C6 / C3 / S3 (newer chips):
+ *     - use esp32 boards core 3.x  AND  NimBLE-Arduino 2.x
+ *     - Board = e.g. "ESP32C6 Dev Module";  Tools -> "USB CDC On Boot" = Enabled
+ *       (otherwise the Serial Monitor stays blank on native-USB boards)
+ *
+ * Fill in CONFIG / secrets.h, pick your board, Upload, open Serial Monitor @ 115200.
  */
 
 #include <WiFi.h>
@@ -116,7 +121,9 @@ void setup() {
 }
 
 void loop() {
-  NimBLEScanResults results = pScan->start(SCAN_SECONDS, false);
+  // NimBLE 2.x: blocking scan, duration in milliseconds.
+  // (On NimBLE 1.4.x use:  pScan->start(SCAN_SECONDS, false)  instead.)
+  NimBLEScanResults results = pScan->getResults(SCAN_SECONDS * 1000, false);
   unsigned long now = millis();
 
   for (int i = 0; i < results.getCount(); i++) {
