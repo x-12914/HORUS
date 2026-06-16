@@ -45,6 +45,25 @@
   <span class="badge {{ m.get(t,'b-grey') }}">{{ t }}</span>
 {% endmacro %}
 
+{# Live/offline-aware status: shows OFFLINE once an asset stops reporting. #}
+{% macro asset_status_badge(a) %}
+  {%- if a.last_seen and not a.online -%}
+    <span class="badge b-grey">OFFLINE</span>
+  {%- else -%}
+    {{ tracking_badge(a.tracking_status) }}
+  {%- endif -%}
+{% endmacro %}
+
+{# Relative time from a seconds count. #}
+{% macro ago(secs) %}
+  {%- if secs is none -%}—
+  {%- elif secs < 60 -%}{{ secs }}s ago
+  {%- elif secs < 3600 -%}{{ (secs // 60) }}m ago
+  {%- elif secs < 86400 -%}{{ (secs // 3600) }}h ago
+  {%- else -%}{{ (secs // 86400) }}d ago
+  {%- endif -%}
+{% endmacro %}
+
 {% macro alert_badge(s) %}
   {%- set m = {'AIR ALERT':'b-red','WARNING':'b-amber','INFO':'b-blue','ALL CLEAR':'b-green'} -%}
   <span class="badge {{ m.get(s,'b-grey') }}">{{ s }}</span>

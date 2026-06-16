@@ -41,12 +41,14 @@ const char* INGEST_TOKEN = SECRET_INGEST_TOKEN;
 
 const char* HORUS_URL   = "https://horus.157.250.205.174.nip.io/api/track";
 const char* ROOM_CODE   = "ARM-A";        // this gateway's room code in HORUS
-const char* NAME_PREFIX = "HORUS-";       // only track beacons whose name starts with this
+const char* NAME_PREFIX = "21";           // only track beacons whose name starts with this (phone BT name, for testing)
 
 const int   RSSI_MIN      = -85;          // ignore weaker (farther) signals; raise toward -70 to shrink the room
 const int   SCAN_SECONDS  = 5;            // length of each BLE scan
 const unsigned long SEEN_TIMEOUT = 20000; // ms without a sighting -> report LEFT
 const unsigned long HEARTBEAT    = 30000; // ms: re-affirm presence while seen
+
+#define GW_DEBUG 1   // 1 = print a heartbeat every scan cycle (set 0 when done)
 // ==============================================
 
 #define MAX_TAGS 16
@@ -108,10 +110,12 @@ void postTrack(const String& deviceId, const char* room, const char* presence) {
 
 void setup() {
   Serial.begin(115200);
-  delay(300);
+  delay(1500);   // give the C6 native-USB CDC time to connect so prints aren't lost
   Serial.printf("\nHORUS gateway | room=%s | tracking '%s*' (RSSI >= %d)\n", ROOM_CODE, NAME_PREFIX, RSSI_MIN);
 
   ensureWifi();
+  Serial.printf("WiFi status after connect: %s\n",
+                WiFi.status() == WL_CONNECTED ? "CONNECTED" : "NOT CONNECTED");
 
   NimBLEDevice::init("");
   pScan = NimBLEDevice::getScan();
@@ -125,6 +129,16 @@ void loop() {
   // (On NimBLE 1.4.x use:  pScan->start(SCAN_SECONDS, false)  instead.)
   NimBLEScanResults results = pScan->getResults(SCAN_SECONDS * 1000, false);
   unsigned long now = millis();
+
+#if GW_DEBUG
+  Serial.printf("scan: %d device(s) | WiFi %s\n", results.getCount(),
+                WiFi.status() == WL_CONNECTED ? "connected" : "NOT connected");
+  for (int i = 0; i < results.getCount(); i++) {
+    const NimBLEAdvertisedDevice* d = results.getDevice(i);
+    String n = String(d->getName().c_str());
+    if (n.length()) Serial.printf("    name='%s' rssi=%d\n", n.c_str(), d->getRSSI());
+  }
+#endif
 
   for (int i = 0; i < results.getCount(); i++) {
     const NimBLEAdvertisedDevice* dev = results.getDevice(i);

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import presence_badge, tracking_badge %}
+{% from "macros.html" import presence_badge, tracking_badge, asset_status_badge, ago %}
 {% block title %}Asset Tracking{% endblock %}
 {% block crumb %}Asset Tracking — Facility{% endblock %}
 
@@ -16,6 +16,7 @@
   <div class="stat"><div class="stat-label">Tracked Assets</div><div class="stat-value">{{ counts.total or 0 }}</div></div>
   <div class="stat"><div class="stat-label">In Facility</div><div class="stat-value green">{{ counts.in_facility or 0 }}</div></div>
   <div class="stat red"><div class="stat-label">Left Facility</div><div class="stat-value red">{{ counts.left_facility or 0 }}</div></div>
+  <div class="stat"><div class="stat-label">Offline</div><div class="stat-value">{{ offline or 0 }}</div><div class="stat-foot">no report &gt; {{ 90 }}s</div></div>
   <div class="stat amber"><div class="stat-label">No Position Yet</div><div class="stat-value amber">{{ counts.untracked or 0 }}</div></div>
 </div>
 
@@ -37,8 +38,9 @@
     {% if r.zone %}<div class="muted" style="font-size:11px; letter-spacing:1px">{{ r.zone }}</div>{% endif %}
     <div class="room-assets">
       {% for a in by_room.get(r.id, []) %}
-      <a class="room-asset" href="{{ url_for('asset_edit', asset_id=a.id) }}">
-        <span class="dot dot-green"></span>{{ a.asset_tag }} <span class="muted">{{ a.name }}</span>
+      <a class="room-asset" href="{{ url_for('asset_edit', asset_id=a.id) }}" title="{% if a.last_seen %}last seen {{ ago(a.age_secs) }}{% endif %}">
+        <span class="dot {{ 'dot-green' if a.online else 'dot-grey' }}"></span>{{ a.asset_tag }} <span class="muted">{{ a.name }}</span>
+        {% if a.last_seen and not a.online %}<span class="badge b-grey" style="margin-left:auto">OFFLINE</span>{% endif %}
       </a>
       {% else %}
       <div class="muted" style="font-size:11px; padding:6px 0">— empty —</div>

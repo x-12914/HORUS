@@ -119,6 +119,10 @@ TRACKING_STATUSES = ["AWAITING HARDWARE", "LIVE", "LOST", "DISABLED"]
 PRESENCE_STATES = ["UNKNOWN", "IN FACILITY", "LEFT FACILITY"]
 ALERT_SEVERITIES = ["INFO", "WARNING", "AIR ALERT", "ALL CLEAR"]
 
+# An asset that hasn't reported within this many seconds is shown OFFLINE.
+# The gateway re-affirms presence every ~30s, so ~90s = ~3 missed cycles.
+STALE_AFTER_SECONDS = 90
+
 VOCAB = dict(
     branches=BRANCHES, classifications=CLASSIFICATIONS, statuses=STATUSES,
     outcomes=OUTCOMES, casualty_types=CASUALTY_TYPES,
@@ -476,6 +480,34 @@ def _rooms():
     return db.query("SELECT * FROM rooms ORDER BY name")
 
 
+# Asset SELECT that also computes seconds since last report (age_secs).
+ASSET_SELECT = (
+    "SELECT a.*, r.name AS room_name, "
+    "CAST(strftime('%s','now') - strftime('%s', a.last_seen) AS INTEGER) AS age_secs "
+    "FROM assets a LEFT JOIN rooms r ON r.id = a.current_room_id"
+)
+
+
+def _annotate_assets(rows):
+    """Convert asset rows to dicts and add an `online` flag based on age_secs.
+
+    An asset is online only if it has reported recently; once it stops (gateway
+    powered off, out of range), age_secs grows past the threshold and it is
+    treated as OFFLINE even though its stored tracking_status is still LIVE.
+    """
+    out = []
+    for r in rows:
+        d = dict(r)
+        age = d.get("age_secs")
+        d["online"] = (
+            d.get("last_seen") is not None
+            and age is not None
+            and age <= STALE_AFTER_SECONDS
+        )
+        out.append(d)
+    return out
+
+
 @app.route("/tracking")
 def tracking_dashboard():
     counts = db.query(
@@ -493,11 +525,10 @@ def tracking_dashboard():
     )["c"]
 
     rooms = _rooms()
-    assets = db.query(
-        """SELECT a.*, r.name AS room_name
-           FROM assets a LEFT JOIN rooms r ON r.id = a.current_room_id
-           ORDER BY a.asset_tag"""
-    )
+    assets = _annotate_assets(db.query(ASSET_SELECT + " ORDER BY a.asset_tag"))
+    # Assets that reported before but have since gone quiet (gateway down, etc.).
+    offline = sum(1 for a in assets if a["last_seen"] and not a["online"])
+
     # Bucket assets by room id; None bucket holds unlocated assets.
     by_room = {}
     for a in assets:
@@ -508,7 +539,7 @@ def tracking_dashboard():
 
     return render_template(
         "tracking.html", counts=counts, live=live, rooms=rooms,
-        by_room=by_room, unlocated=unlocated, departed=departed,
+        by_room=by_room, unlocated=unlocated, departed=departed, offline=offline,
     )
 
 
@@ -519,10 +550,7 @@ def assets_list():
     presence = request.args.get("presence", "")
     search = request.args.get("q", "").strip()
 
-    sql = (
-        "SELECT a.*, r.name AS room_name FROM assets a "
-        "LEFT JOIN rooms r ON r.id = a.current_room_id WHERE 1=1"
-    )
+    sql = ASSET_SELECT + " WHERE 1=1"
     params = []
     if room:
         sql += " AND a.current_room_id = ?"
@@ -539,7 +567,7 @@ def assets_list():
         params += [like, like, like]
     sql += " ORDER BY a.asset_tag"
 
-    assets = db.query(sql, params)
+    assets = _annotate_assets(db.query(sql, params))
     return render_template(
         "assets.html", assets=assets, rooms=_rooms(),
         f_room=room, f_category=category, f_presence=presence, f_search=search,

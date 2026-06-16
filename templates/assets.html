@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import presence_badge, tracking_badge %}
+{% from "macros.html" import presence_badge, tracking_badge, asset_status_badge, ago %}
 {% block title %}Asset Register{% endblock %}
 {% block crumb %}Asset Register{% endblock %}
 
@@ -48,10 +48,10 @@
         <td><b>{{ a.name }}</b></td>
         <td>{{ a.category }}</td>
         <td class="muted">{{ a.device_id or '— none —' }}</td>
-        <td>{{ tracking_badge(a.tracking_status) }}</td>
+        <td>{{ asset_status_badge(a) }}</td>
         <td>{{ a.room_name or '—' }}</td>
         <td>{{ presence_badge(a.presence) }}</td>
-        <td class="muted">{{ a.last_seen or '—' }}</td>
+        <td class="muted">{% if a.last_seen %}{{ ago(a.age_secs) }}<div style="font-size:10px; opacity:.7">{{ a.last_seen }}</div>{% else %}—{% endif %}</td>
         <td>
           <form class="inline-form" method="post" action="{{ url_for('asset_delete', asset_id=a.id) }}" data-confirm="Remove asset {{ a.asset_tag }} from the register?">
             <button class="btn btn-sm btn-danger" type="submit">✕</button>
